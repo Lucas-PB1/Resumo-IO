@@ -5,6 +5,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
+  updatePassword,
   UserCredential
 } from "firebase/auth";
 import { signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react";
@@ -60,6 +61,12 @@ export const authService = {
 
   async resetPassword(data: ForgotPasswordFormData) {
     await sendPasswordResetEmail(auth, data.email);
+  },
+
+  async changePassword(newPassword: string) {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Usuário não autenticado");
+    await updatePassword(user, newPassword);
   },
 
   async logout() {

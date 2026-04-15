@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #f0f7ff;
-  --color-brand-100: #e0effe;
-  --color-brand-200: #bae0fd;
-  --color-brand-300: #7dc8fc;
-  --color-brand-400: #36abf8;
-  --color-brand-500: #0a8fed;
-  --color-brand-600: #0070c7;
-  --color-brand-700: #0159a2;
-  --color-brand-800: #064c86;
-  --color-brand-900: #0a4070;
-  --color-brand-950: #07294b;
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
+  --color-brand-950: #2e1065;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -23,50 +23,59 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+  --radius-2xl: calc(var(--radius) + 16px);
 
-  --animate-in: animate-in 0.2s ease-out;
+  --animate-in: animate-in 0.3s ease-out;
   --animate-out: animate-out 0.2s ease-in;
 }
 
 :root {
-  /* Claro/Corporativo */
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Light Mode - Ultra Clean */
+  --background: #ffffff;
+  --foreground: #020617;
   
-  --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card: rgba(255, 255, 255, 0.8);
+  --card-foreground: #020617;
   
-  --border: #e2e8f0;
-  --input: #cbd5e1;
+  --border: rgba(0, 0, 0, 0.08);
+  --input: rgba(0, 0, 0, 0.04);
   
   --primary: var(--color-brand-600);
   --primary-foreground: #ffffff;
   
-  --muted: #f1f5f9;
+  --accent: var(--color-brand-50);
+  --accent-foreground: var(--color-brand-700);
+  
+  --muted: #f8fafc;
   --muted-foreground: #64748b;
   
-  --radius: 0.5rem;
+  --radius: 1rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark Mode corporativo */
+    /* Dark Mode - Premium Midnight */
     --background: #020617;
     --foreground: #f8fafc;
     
-    --card: #0f172a;
+    --card: rgba(15, 23, 42, 0.6);
     --card-foreground: #f8fafc;
     
-    --border: #1e293b;
-    --input: #334155;
+    --border: rgba(255, 255, 255, 0.08);
+    --input: rgba(255, 255, 255, 0.05);
     
     --primary: var(--color-brand-500);
     --primary-foreground: #ffffff;
+    
+    --accent: rgba(139, 92, 246, 0.1);
+    --accent-foreground: var(--color-brand-400);
     
     --muted: #0f172a;
     --muted-foreground: #94a3b8;

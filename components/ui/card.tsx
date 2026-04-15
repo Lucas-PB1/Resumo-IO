@@ -7,10 +7,10 @@ const Card = React.forwardRef<HTMLDivElement, HTMLMotionProps<"div">>(
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
       ref={ref}
       className={cn(
-        "rounded-xl border bg-card text-card-foreground shadow-sm",
+        "rounded-2xl border bg-card/70 backdrop-blur-md text-card-foreground shadow-2xl shadow-indigo-500/5",
         className
       )}
       {...props}

@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { User, Upload, Image as ImageIcon } from "lucide-react";
+import { User, Upload, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import { storage } from "@/lib/firebase/storage";
 import { userService, UserProfileData } from "../services/user.service";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { authService } from "@/features/auth/services/auth.service";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,13 @@ export const ProfileEditForm = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [successStatus, setSuccessStatus] = useState("");
   const [errorStatus, setErrorStatus] = useState("");
+  
+  // Password state
+  const [passwordState, setPasswordState] = useState({ new: "", confirm: "" });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = useForm<Partial<UserProfileData>>();
@@ -63,7 +71,7 @@ export const ProfileEditForm = () => {
       const downloadURL = await getDownloadURL(storageRef);
       
       setValue("photoURL", downloadURL, { shouldDirty: true });
-      await onSubmit({ photoURL: downloadURL }); // Auto-save on upload
+      await onSubmit({ photoURL: downloadURL }); 
       setSuccessStatus("Avatar atualizado com sucesso!");
     } catch (err) {
       console.error(err);
@@ -92,28 +100,65 @@ export const ProfileEditForm = () => {
     }
   };
 
-  if (loading) return <div className="text-center p-8">Carregando...</div>;
+  const handleChangePassword = async () => {
+    if (passwordState.new !== passwordState.confirm) {
+      setPasswordError("As senhas não coincidem.");
+      return;
+    }
+    if (passwordState.new.length < 6) {
+      setPasswordError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      setPasswordError("");
+      setPasswordSuccess("");
+      await authService.changePassword(passwordState.new);
+      setPasswordSuccess("Senha alterada com sucesso!");
+      setPasswordState({ new: "", confirm: "" });
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === "auth/requires-recent-login") {
+        setPasswordError("Para sua segurança, saia e entre novamente antes de trocar a senha.");
+      } else {
+        setPasswordError("Erro ao trocar a senha. Tente novamente.");
+      }
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  if (loading) return <div className="text-center p-12 animate-pulse text-muted-foreground font-medium">Carregando perfil...</div>;
 
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
-        <div className="flex items-center gap-4">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="pb-20 w-full"
+    >
+      <Card className="w-full overflow-hidden border-none shadow-2xl bg-card/70 backdrop-blur-2xl">
+        {/* Banner Area */}
+        <div className="h-40 bg-linear-to-r from-brand-600/30 via-brand-500/10 to-transparent" />
+        
+        {/* Header with Avatar */}
+        <div className="px-8 pb-8 -mt-16 flex flex-col md:flex-row items-end gap-6 border-b border-white/5 bg-linear-to-b from-transparent to-card/50">
           <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-            <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-primary border-2 border-transparent group-hover:border-primary transition-all">
+            <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden bg-background flex items-center justify-center text-primary border-4 border-background shadow-2xl group-hover:border-brand-500/50 transition-all duration-500 hover:rotate-3">
               {currentPhotoURL ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={currentPhotoURL} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <User size={32} />
+                <User size={64} className="text-muted-foreground/30" />
               )}
               {uploadingImage && (
-                <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-                  <span className="animate-spin text-primary">⏳</span>
+                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center">
+                  <span className="animate-spin text-brand-500">⏳</span>
                 </div>
               )}
             </div>
-            <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground p-1 rounded-full shadow-md">
-              <Upload size={12} />
+            <div className="absolute -bottom-2 -right-2 bg-brand-600 text-white p-2.5 rounded-2xl shadow-xl border-4 border-background group-hover:scale-110 transition-transform">
+              <Upload size={18} />
             </div>
             <input 
               type="file" 
@@ -123,63 +168,113 @@ export const ProfileEditForm = () => {
               onChange={handleFileChange}
             />
           </div>
-          <div>
-            <CardTitle className="text-xl">Opções de Conta</CardTitle>
-            <CardDescription>Atualize suas informações pessoais e sua foto de perfil via Firebase Storage.</CardDescription>
+          <div className="pb-2 space-y-1">
+            <h1 className="text-4xl font-black tracking-tight text-foreground">Minha Conta</h1>
+            <p className="text-muted-foreground font-medium">Gerencie suas informações e segurança em um só lugar.</p>
           </div>
         </div>
-      </CardHeader>
-      
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
-          <div className="bg-blue-50 text-blue-800 p-3 rounded-md text-sm mb-4">
-            Nota: Para redefinir e-mail ou senha, por favor utilize os fluxos de segurança do sistema.
+
+        {/* Section 1: Personal Data */}
+        <div className="p-8 md:p-12 space-y-10">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-6 bg-brand-500 rounded-full" />
+            <h2 className="text-xl font-bold tracking-tight">Dados Pessoais</h2>
+          </div>
+          
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+              <div className="space-y-3">
+                <Label htmlFor="firstName" className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Primeiro Nome</Label>
+                <Input id="firstName" {...register("firstName", { required: true })} placeholder="Ex: Lucas" className="bg-muted/20" />
+              </div>
+              <div className="space-y-3">
+                <Label htmlFor="lastName" className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Sobrenome</Label>
+                <Input id="lastName" {...register("lastName", { required: true })} placeholder="Ex: Soares" className="bg-muted/20"  />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+              <div className="space-y-3">
+                <Label htmlFor="birthDate" className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Data de Nascimento</Label>
+                <Input id="birthDate" type="date" {...register("birthDate", { required: true })} className="bg-muted/20"  />
+              </div>
+              <div className="space-y-3">
+                <Label htmlFor="gender" className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Gênero</Label>
+                <Select id="gender" {...register("gender")} className="bg-muted/20 text-foreground">
+                  <option value="MASCULINO" className="bg-background text-foreground">Masculino</option>
+                  <option value="FEMININO" className="bg-background text-foreground">Feminino</option>
+                  <option value="OUTRO" className="bg-background text-foreground">Outro</option>
+                  <option value="PREFIRO_NAO_DIZER" className="bg-background text-foreground">Prefiro não dizer</option>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-6 pt-4 border-t border-white/5 mt-10">
+              <Button type="submit" isLoading={isSubmitting || uploadingImage} size="lg" className="px-12 font-bold shadow-xl shadow-brand-500/20 w-full sm:w-auto">
+                Salvar Alterações
+              </Button>
+              {(errorStatus || successStatus) && (
+                <p className={`text-sm font-semibold ${errorStatus ? "text-red-500" : "text-brand-500"}`}>
+                  {errorStatus || successStatus}
+                </p>
+              )}
+            </div>
+          </form>
+        </div>
+
+        {/* Separator */}
+        <div className="h-px bg-white/5 mx-8 md:mx-12" />
+
+        {/* Section 2: Security */}
+        <div className="p-8 md:p-12 space-y-10">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-6 bg-brand-500 rounded-full" />
+            <h2 className="text-xl font-bold tracking-tight">Segurança</h2>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">Nome</Label>
-              <Input id="firstName" {...register("firstName", { required: true })} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+            <div className="space-y-3">
+              <Label htmlFor="newPassword" className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Nova Senha</Label>
+              <Input 
+                id="newPassword" 
+                type="password" 
+                placeholder="Mínimo 6 caracteres"
+                value={passwordState.new}
+                onChange={(e) => setPasswordState({...passwordState, new: e.target.value})}
+                className="bg-muted/20"
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Sobrenome</Label>
-              <Input id="lastName" {...register("lastName", { required: true })} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="birthDate">Data de Nascimento</Label>
-              <Input id="birthDate" type="date" {...register("birthDate", { required: true })} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="gender">Gênero</Label>
-              <Select id="gender" {...register("gender")}>
-                <option value="MASCULINO">Masculino</option>
-                <option value="FEMININO">Feminino</option>
-                <option value="OUTRO">Outro</option>
-                <option value="PREFIRO_NAO_DIZER">Prefiro não dizer</option>
-              </Select>
+            <div className="space-y-3">
+              <Label htmlFor="confirmPassword" className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Confirmar Senha</Label>
+              <Input 
+                id="confirmPassword" 
+                type="password" 
+                placeholder="Sua senha novamente"
+                value={passwordState.confirm}
+                onChange={(e) => setPasswordState({...passwordState, confirm: e.target.value})}
+                className="bg-muted/20"
+              />
             </div>
           </div>
 
-          {errorStatus && (
-            <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md border border-red-200">
-              {errorStatus}
-            </div>
-          )}
-          {successStatus && (
-            <div className="p-3 bg-green-50 text-green-700 text-sm rounded-md border border-green-200">
-              {successStatus}
-            </div>
-          )}
-        </CardContent>
-        <CardFooter>
-          <Button type="submit" isLoading={isSubmitting || uploadingImage}>
-            Salvar Alterações
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+          <div className="flex flex-col sm:flex-row items-center gap-6 pt-4 border-t border-white/5 mt-10">
+            <Button 
+              onClick={handleChangePassword} 
+              variant="outline" 
+              isLoading={changingPassword}
+              size="lg"
+              className="px-12 font-bold border-2 border-brand-500/20 hover:bg-brand-500 hover:text-white transition-all shadow-lg w-full sm:w-auto"
+            >
+              Mudar Senha
+            </Button>
+            {(passwordError || passwordSuccess) && (
+              <p className={`text-sm font-semibold ${passwordError ? "text-red-500" : "text-brand-500"}`}>
+                {passwordError || passwordSuccess}
+              </p>
+            )}
+          </div>
+        </div>
+      </Card>
+    </motion.div>
   );
 }
