@@ -1,18 +1,18 @@
-import * as React from "react";
-import { cn } from "@/lib/utils";
+import * as React from "react"
+import { cn } from "@/lib/utils"
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
-  error?: string;
-};
+  error?: string
+}
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, error, ...props }, ref) => {
     return (
-      <div className="flex flex-col gap-1 w-full relative">
+      <div className="relative flex w-full flex-col gap-1">
         <input
           type={type}
           className={cn(
-            "flex h-11 w-full rounded-xl border border-border bg-muted/40 px-4 py-2 text-sm shadow-inner transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50",
+            "border-border bg-muted/40 placeholder:text-muted-foreground focus-visible:ring-primary/20 focus-visible:border-primary flex h-11 w-full rounded-xl border px-4 py-2 text-sm shadow-inner transition-all focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
             error && "border-red-500 focus-visible:ring-red-500",
             className
           )}
@@ -20,14 +20,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {error && (
-          <span className="text-xs text-red-500 animate-in fade-in slide-in-from-top-1">
+          <span className="animate-in fade-in slide-in-from-top-1 text-xs text-red-500">
             {error}
           </span>
         )}
       </div>
-    );
+    )
   }
-);
-Input.displayName = "Input";
+)
+Input.displayName = "Input"
 
-export { Input };
+export { Input }

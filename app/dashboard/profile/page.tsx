@@ -1,9 +1,9 @@
-import { ProfileEditForm } from "@/features/user/components/ProfileEditForm";
+import { ProfileEditForm } from "@/features/user/components/ProfileEditForm"
 
 export default function ProfilePage() {
   return (
-    <div className="flex justify-center mt-6">
+    <div className="mt-6 flex justify-center">
       <ProfileEditForm />
     </div>
-  );
+  )
 }

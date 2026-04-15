@@ -1,15 +1,21 @@
-"use client";
+"use client"
 
-import { useAuth } from "@/features/auth/hooks/useAuth";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { motion } from "motion/react";
+import { useAuth } from "@/features/auth/hooks/useAuth"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
+import { motion } from "motion/react"
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user } = useAuth()
 
   return (
     <div className="space-y-6">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -23,13 +29,15 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Visão Geral do Sistema</CardTitle>
-            <CardDescription>Métricas em tempo real sobre seu projeto CMS.</CardDescription>
+            <CardDescription>
+              Métricas em tempo real sobre seu projeto CMS.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="h-32 flex items-center justify-center text-muted-foreground bg-muted/10 m-6 mt-0 rounded-md border border-dashed">
+          <CardContent className="text-muted-foreground bg-muted/10 m-6 mt-0 flex h-32 items-center justify-center rounded-md border border-dashed">
             Métricas em breve
           </CardContent>
         </Card>
       </div>
     </div>
-  );
+  )
 }
