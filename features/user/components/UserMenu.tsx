@@ -67,9 +67,9 @@ export const UserMenu = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="bg-card/80 absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-2xl border border-white/5 shadow-2xl ring-1 ring-black/20 backdrop-blur-2xl"
+            className="bg-card border-brand-500/10 ring-brand-900/5 absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-2xl border shadow-2xl ring-1 transition-all"
           >
-            <div className="border-b border-white/5 bg-linear-to-b from-white/5 to-transparent p-5">
+            <div className="border-brand-500/10 from-brand-500/5 border-b bg-linear-to-b to-transparent p-5">
               <p className="text-foreground text-sm font-bold tracking-tight">
                 {displayName}
               </p>

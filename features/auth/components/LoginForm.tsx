@@ -91,7 +91,7 @@ export const LoginForm = () => {
           </div>
 
           {errorStatus && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+            <div className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-500">
               {errorStatus}
             </div>
           )}

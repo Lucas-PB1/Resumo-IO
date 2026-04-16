@@ -74,7 +74,7 @@ export const ForgotPasswordForm = () => {
             </div>
 
             {errorStatus && (
-              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+              <div className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-500">
                 {errorStatus}
               </div>
             )}
@@ -98,7 +98,7 @@ export const ForgotPasswordForm = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="rounded-md border border-green-200 bg-green-50 p-4 text-center text-green-700"
+            className="rounded-md border border-green-500/20 bg-green-500/10 p-4 text-center text-green-500"
           >
             Se houver uma conta associada a este email, você receberá um link
             para redefinir sua senha.

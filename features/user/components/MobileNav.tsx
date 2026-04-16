@@ -21,7 +21,7 @@ export function MobileNav() {
       <motion.nav
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="bg-card/70 flex items-center justify-around rounded-4xl border border-white/10 p-2 shadow-2xl shadow-black/50 backdrop-blur-2xl"
+        className="bg-card border-brand-500/10 shadow-brand-900/10 flex items-center justify-around rounded-4xl border p-2 shadow-2xl"
       >
         {tabs.map((tab) => {
           const isActive = pathname === tab.path

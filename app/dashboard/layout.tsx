@@ -6,6 +6,7 @@ import { motion } from "motion/react"
 import { UserMenu } from "@/features/user/components/UserMenu"
 import { Button } from "@/components/ui/button"
 import { MobileNav } from "@/features/user/components/MobileNav"
+import { FileBox } from "lucide-react"
 
 export default function DashboardLayout({
   children,
@@ -13,8 +14,8 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-background selection:bg-brand-500/30 flex min-h-screen flex-col">
-      <header className="bg-background/80 sticky top-0 z-40 w-full border-b border-white/10 shadow-xl shadow-black/40 backdrop-blur-2xl">
+    <div className="bg-background selection:bg-dusty-blue/30 flex min-h-screen flex-col">
+      <header className="bg-background/80 border-border sticky top-0 z-40 w-full border-b shadow-lg shadow-slate-900/5 backdrop-blur-2xl">
         <div className="mx-auto flex h-20 w-full max-w-[1400px] items-center justify-between px-6 md:px-12">
           <Link href="/dashboard">
             <motion.div
@@ -22,19 +23,19 @@ export default function DashboardLayout({
               animate={{ opacity: 1, x: 0 }}
               className="text-foreground flex items-center gap-3 text-2xl font-bold tracking-tighter"
             >
-              <div className="from-brand-600 to-brand-400 shadow-brand-500/20 flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br text-white shadow-lg">
-                C
+              <div className="from-dusty-blue to-dusty-blue/80 shadow-dusty-blue/10 flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br text-white shadow-lg">
+                <FileBox size={22} strokeWidth={2.5} />
               </div>
               <span className="from-foreground to-foreground/70 bg-linear-to-r bg-clip-text text-transparent">
-                CMS Panel
+                Resume <span className="text-dusty-blue font-black">IO</span>
               </span>
             </motion.div>
           </Link>
-          <div className="bg-muted/20 mx-8 hidden items-center gap-1 rounded-2xl border border-white/5 p-1.5 md:flex">
+          <div className="bg-accent border-border mx-8 hidden items-center gap-1 rounded-2xl border p-1.5 md:flex">
             <Link href="/dashboard">
               <Button
                 variant="ghost"
-                className="hover:bg-brand-500/10 hover:text-brand-400 rounded-xl px-4 font-bold"
+                className="hover:bg-background hover:text-dusty-blue rounded-xl px-4 font-bold"
               >
                 Início
               </Button>
@@ -42,7 +43,7 @@ export default function DashboardLayout({
             <Link href="/dashboard/templates">
               <Button
                 variant="ghost"
-                className="hover:bg-brand-500/10 hover:text-brand-400 rounded-xl px-4 font-bold"
+                className="hover:bg-background hover:text-dusty-blue rounded-xl px-4 font-bold"
               >
                 Modelos
               </Button>
@@ -50,7 +51,7 @@ export default function DashboardLayout({
             <Link href="/dashboard/categories">
               <Button
                 variant="ghost"
-                className="hover:bg-brand-500/10 hover:text-brand-400 rounded-xl px-5 font-bold"
+                className="hover:bg-background hover:text-dusty-blue rounded-xl px-5 font-bold"
               >
                 Categorias
               </Button>
@@ -58,7 +59,7 @@ export default function DashboardLayout({
             <Link href="/dashboard/documents">
               <Button
                 variant="ghost"
-                className="hover:bg-brand-500/10 hover:text-brand-400 rounded-xl px-5 font-bold"
+                className="hover:bg-background hover:text-dusty-blue rounded-xl px-5 font-bold"
               >
                 Documentos
               </Button>
