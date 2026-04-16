@@ -10,6 +10,7 @@ import {
   where,
   Timestamp,
   deleteDoc,
+  updateDoc,
 } from "firebase/firestore"
 import {
   ref,
@@ -31,6 +32,10 @@ export interface DocumentTemplate {
   storagePath: string
   fields: TemplateField[]
   ownerId: string
+  category?: string
+  subcategory?: string
+  authorId?: string
+  authorName?: string
   createdAt: any
 }
 
@@ -83,10 +88,20 @@ export const templateService = {
   },
 
   async deleteTemplate(id: string, storagePath: string) {
-    // Delete from Firestore
     await deleteDoc(doc(db, TEMPLATES_COLLECTION, id))
-    // Delete from Storage
-    const storageRef = ref(storage, storagePath)
-    await deleteObject(storageRef)
+    
+    if (storagePath && storagePath.trim() !== "") {
+      try {
+        const storageRef = ref(storage, storagePath)
+        await deleteObject(storageRef)
+      } catch (err) {
+        console.warn("Could not delete physical file from Storage, it might have been moved or already deleted.", err)
+      }
+    }
+  },
+
+  async updateTemplate(id: string, updates: Partial<DocumentTemplate>) {
+    const docRef = doc(db, TEMPLATES_COLLECTION, id)
+    await updateDoc(docRef, updates)
   },
 }

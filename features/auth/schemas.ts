@@ -13,7 +13,7 @@ export const registerSchema = z.object({
   password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
   birthDate: z.string().min(1, "A data de nascimento é obrigatória"),
   gender: z.enum(["MASCULINO", "FEMININO", "OUTRO", "PREFIRO_NAO_DIZER"], {
-    errorMap: () => ({ message: "Selecione um gênero válido" }),
+    message: "Selecione um gênero válido",
   }),
 })
 export type RegisterFormData = z.infer<typeof registerSchema>

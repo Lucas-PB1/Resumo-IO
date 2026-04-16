@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import {
   ArrowLeft,
   Upload,
@@ -21,6 +21,7 @@ import {
   templateService,
   TemplateField,
 } from "@/features/documents/services/template.service"
+import { taxonomyService, Category } from "@/features/documents/services/taxonomy.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,9 +41,48 @@ export default function NewTemplatePage() {
   const [templateName, setTemplateName] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [fields, setFields] = useState<TemplateField[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState("")
+  const [category, setCategory] = useState("")
+  const [subcategory, setSubcategory] = useState("")
   const [isUploading, setIsUploading] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [authorName, setAuthorName] = useState("")
+
+  // Fetch user profile and categories
+  useEffect(() => {
+    async function fetchData() {
+      if (!user) return
+      try {
+        const { userService } = await import("@/features/user/services/user.service")
+        const { taxonomyService } = await import("@/features/documents/services/taxonomy.service")
+        
+        const [profile, catData] = await Promise.all([
+          userService.getUserProfile(user.uid),
+          taxonomyService.getCategories(user.uid)
+        ])
+
+        if (profile) {
+          setAuthorName(`${profile.firstName} ${profile.lastName}`)
+        } else if (user.displayName) {
+          setAuthorName(user.displayName)
+        }
+        
+        setCategories(catData)
+      } catch (err) {
+        console.error("Failed to fetch data", err)
+      }
+    }
+    fetchData()
+  }, [user])
+
+  const handleCategoryChange = (val: string) => {
+    const cat = categories.find(c => c.name === val)
+    setCategory(val)
+    setSelectedCategoryId(cat?.id || "")
+    setSubcategory("") // Reset subcategory when category changes
+  }
 
   const scanPlaceholders = async (file: File) => {
     setIsScanning(true)
@@ -107,6 +147,10 @@ export default function NewTemplatePage() {
         storagePath,
         fields,
         ownerId: user.uid,
+        category,
+        subcategory,
+        authorId: user.uid,
+        authorName: authorName || user.displayName || user.email || "Autor Desconhecido",
       })
       router.push("/dashboard/templates")
     } catch (err) {
@@ -166,6 +210,40 @@ export default function NewTemplatePage() {
                   placeholder="Ex: Relatório Mensal"
                   className="bg-muted/20"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <Label className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
+                    Categoria
+                  </Label>
+                  <Select
+                    value={category}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                    className="bg-muted/20"
+                  >
+                    <option value="">Selecione...</option>
+                    {categories.map(c => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
+                    Subcategoria
+                  </Label>
+                  <Select
+                    value={subcategory}
+                    onChange={(e) => setSubcategory(e.target.value)}
+                    className="bg-muted/20"
+                    disabled={!category}
+                  >
+                    <option value="">Selecione...</option>
+                    {categories.find(c => c.id === selectedCategoryId)?.subcategories.map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-3">

@@ -12,8 +12,8 @@ export function MobileNav() {
   const tabs = [
     { name: "Início", path: "/dashboard", icon: Layout },
     { name: "Modelos", path: "/dashboard/templates", icon: Sparkles },
-    { name: "Gerar", path: "/dashboard/reports", icon: Files },
-    { name: "Arquivos", path: "/dashboard/documents", icon: User },
+    { name: "Categorias", path: "/dashboard/categories", icon: Layout },
+    { name: "Arquivos", path: "/dashboard/documents", icon: Files },
   ]
 
   return (
@@ -21,7 +21,7 @@ export function MobileNav() {
       <motion.nav
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="flex items-center justify-around bg-card/70 backdrop-blur-2xl border border-white/10 p-2 rounded-[2rem] shadow-2xl shadow-black/50"
+        className="flex items-center justify-around bg-card/70 backdrop-blur-2xl border border-white/10 p-2 rounded-4xl shadow-2xl shadow-black/50"
       >
         {tabs.map((tab) => {
           const isActive = pathname === tab.path

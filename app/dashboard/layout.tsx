@@ -16,33 +16,43 @@ export default function DashboardLayout({
     <div className="bg-background selection:bg-brand-500/30 flex min-h-screen flex-col">
       <header className="bg-background/80 sticky top-0 z-40 w-full border-b border-white/10 shadow-xl shadow-black/40 backdrop-blur-2xl">
         <div className="mx-auto flex h-20 w-full max-w-[1400px] items-center justify-between px-6 md:px-12">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-foreground flex items-center gap-3 text-2xl font-bold tracking-tighter"
-          >
-            <div className="from-brand-600 to-brand-400 shadow-brand-500/20 flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br text-white shadow-lg">
-              C
-            </div>
-            <span className="from-foreground to-foreground/70 bg-linear-to-r bg-clip-text text-transparent">
-              CMS Panel
-            </span>
-          </motion.div>
+          <Link href="/dashboard">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-foreground flex items-center gap-3 text-2xl font-bold tracking-tighter"
+            >
+              <div className="from-brand-600 to-brand-400 shadow-brand-500/20 flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br text-white shadow-lg">
+                C
+              </div>
+              <span className="from-foreground to-foreground/70 bg-linear-to-r bg-clip-text text-transparent">
+                CMS Panel
+              </span>
+            </motion.div>
+          </Link>
           <div className="bg-muted/20 mx-8 hidden items-center gap-1 rounded-2xl border border-white/5 p-1.5 md:flex">
+            <Link href="/dashboard">
+              <Button
+                variant="ghost"
+                className="hover:bg-brand-500/10 hover:text-brand-400 rounded-xl px-4 font-bold"
+              >
+                Início
+              </Button>
+            </Link>
             <Link href="/dashboard/templates">
               <Button
                 variant="ghost"
-                className="hover:bg-brand-500/10 hover:text-brand-400 rounded-xl px-5 font-bold"
+                className="hover:bg-brand-500/10 hover:text-brand-400 rounded-xl px-4 font-bold"
               >
                 Modelos
               </Button>
             </Link>
-            <Link href="/dashboard/reports">
+            <Link href="/dashboard/categories">
               <Button
                 variant="ghost"
                 className="hover:bg-brand-500/10 hover:text-brand-400 rounded-xl px-5 font-bold"
               >
-                Relatórios
+                Categorias
               </Button>
             </Link>
             <Link href="/dashboard/documents">
