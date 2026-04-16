@@ -10,11 +10,8 @@ import {
   FileType,
   Plus,
   Trash2,
-  Columns,
-  Rows,
   X,
   PlusCircle,
-  Table as TableIcon,
   Sparkles,
 } from "lucide-react"
 import { motion } from "motion/react"

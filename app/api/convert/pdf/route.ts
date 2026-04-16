@@ -39,12 +39,20 @@ export async function POST(req: NextRequest) {
       console.warn("Chromium executable path not found via sparticuz.")
     }
 
-    // Se estivermos em ambiente de desenvolvimento (Windows), tentamos achar o Chrome/Edge local
+    // Se estivermos em ambiente de desenvolvimento ou ambiente Linux local, tentamos caminhos comuns
     if (!executablePath && process.env.NODE_ENV === "development") {
       const commonPaths = [
+        // Windows
         "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
         "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
         "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        // Linux
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        // MacOS
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
       ]
       const fs = require("fs")
       executablePath = commonPaths.find((p) => fs.existsSync(p)) || ""

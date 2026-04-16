@@ -9,7 +9,6 @@ import {
   Hash,
   Type,
   Image as LucideImage,
-  Table,
   Sparkles,
   X,
 } from "lucide-react"
@@ -340,16 +339,6 @@ export default function NewTemplatePage() {
                   imagens:{" "}
                   <code className="bg-brand-500/10 text-brand-500 rounded-md px-1.5 py-0.5 font-mono">{`{%foto_vistoria}`}</code>
                   . Isso garante que o sistema insira a foto e não o texto.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-foreground font-bold">3. Tabelas / Listas</p>
-                <p className="text-muted-foreground leading-relaxed">
-                  Inicie com{" "}
-                  <code className="bg-brand-500/10 text-brand-500 rounded-md px-1.5 py-0.5 font-mono">{`{#itens}`}</code>{" "}
-                  e feche com{" "}
-                  <code className="bg-brand-500/10 text-brand-500 rounded-md px-1.5 py-0.5 font-mono">{`{/itens}`}</code>
-                  .
                 </p>
               </div>
             </CardContent>
