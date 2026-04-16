@@ -12,24 +12,114 @@ export const generatorService = {
     return await response.arrayBuffer()
   },
 
-  async generateDocx(templateBuffer: ArrayBuffer, data: Record<string, any>) {
+  autoPromoteImageTags(zip: PizZip, fieldTypes: Record<string, string>) {
+    // Files to scan for tags
+    const filesToProcess = [
+      "word/document.xml",
+      ...Object.keys(zip.files).filter(name => 
+        name.startsWith("word/header") || name.startsWith("word/footer")
+      )
+    ]
+
+    filesToProcess.forEach(fileName => {
+      const file = zip.file(fileName)
+      if (!file) return
+
+      let content = file.asText()
+      let modified = false
+
+      Object.entries(fieldTypes).forEach(([key, type]) => {
+        if (type === "image") {
+          // Regex to find {key} even if split by XML tags like <w:t>{</w:t><w:t>key</w:t>
+          // For simplicity and safety during generation, we target the most common <w:t>{key}</w:t>
+          const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          const regex = new RegExp(`\\{(${escapedKey})\\}`, 'g')
+          
+          if (regex.test(content)) {
+            content = content.replace(regex, "{%$1}")
+            modified = true
+          }
+        }
+      })
+
+      if (modified) {
+        zip.file(fileName, content)
+      }
+    })
+  },
+
+  autoPromoteTableTags(zip: PizZip, fieldTypes: Record<string, string>) {
+    const filesToProcess = [
+      "word/document.xml",
+      ...Object.keys(zip.files).filter(name => 
+        name.startsWith("word/header") || name.startsWith("word/footer")
+      )
+    ]
+
+    filesToProcess.forEach(fileName => {
+      const file = zip.file(fileName)
+      if (!file) return
+
+      let content = file.asText()
+      let modified = false
+
+      Object.entries(fieldTypes).forEach(([key, type]) => {
+        if (type === "table") {
+          const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          
+          // Case 1: If the user didn't use a loop {#key}, we try to wrap the row <w:tr> that contains {key}
+          // This allows simple {tag} to work as a table trigger
+          const regexStr = `(<w:tr(?: [^>]+)?>[\\s\\S]*?\\{${escapedKey}\\}[\\s\\S]*?<\\/w:tr>)`
+          const regex = new RegExp(regexStr, 'g')
+          
+          if (regex.test(content)) {
+            // Check if it's already wrapped in a loop to avoid double nesting
+            if (!content.includes(`{#${key}}`)) {
+              content = content.replace(regex, `{#${key}}$1{/${key}}`)
+              modified = true
+            }
+          }
+        }
+      })
+
+      if (modified) {
+        zip.file(fileName, content)
+      }
+    })
+  },
+
+  async generateDocx(
+    templateBuffer: ArrayBuffer, 
+    data: Record<string, any>,
+    fieldTypes: Record<string, string> = {}
+  ) {
     const zip = new PizZip(templateBuffer)
+
+    // Automagically promote {tag} to {%tag} for image fields
+    this.autoPromoteImageTags(zip, fieldTypes)
+    
+    // Automagically wrap {tag} in loops for table fields
+    this.autoPromoteTableTags(zip, fieldTypes)
 
     // Config for Image Module
     const imageOptions = {
       centered: false,
-      getImage(tagValue: string) {
-        // Tag value should be base64 or buffer
-        return Buffer.from(tagValue.split(",")[1], "base64")
+      getImage(tagValue: any) {
+        if (!tagValue) return null
+        if (typeof tagValue === "string" && tagValue.includes("base64,")) {
+          return Buffer.from(tagValue.split(",")[1], "base64")
+        }
+        return tagValue
       },
       getSize() {
-        // default size for now, can be improved to be dynamic
-        return [150, 150]
+        return [300, 300]
       },
     }
 
+    const imageModule = new ImageModule(imageOptions)
+
     const doc = new Docxtemplater(zip, {
-      modules: [new ImageModule(imageOptions)],
+      modules: [imageModule],
       paragraphLoop: true,
       linebreaks: true,
     })

@@ -8,6 +8,7 @@ import {
   Trash2,
   Hash,
   Sparkles,
+  X,
 } from "lucide-react"
 import { motion } from "motion/react"
 import Link from "next/link"
@@ -93,33 +94,70 @@ export default function EditTemplatePage() {
   }
 
   const scanPlaceholders = async (file: File) => {
-    setIsScanning(true)
     try {
+      setIsScanning(true)
       const arrayBuffer = await file.arrayBuffer()
       const zip = new PizZip(arrayBuffer)
       const content = zip.files["word/document.xml"].asText()
-      const regex = /\{([^{}]*)\}/g
-      const foundTags = new Set<string>()
-      let match
 
-      while ((match = regex.exec(content)) !== null) {
-        const cleanTag = match[1].replace(/<[^>]*>/g, "").trim()
-        if (cleanTag) foundTags.add(cleanTag)
+      // 1. Detect Loops and their columns
+      const loopRegex = /\{#([^}]+)\}([\s\S]*?)\{\/\1\}/g
+      const fieldMap = new Map<string, TemplateField>()
+      let loopMatch
+
+      while ((loopMatch = loopRegex.exec(content)) !== null) {
+        const loopKey = loopMatch[1].replace(/<[^>]*>/g, "").trim()
+        const loopContent = loopMatch[2]
+        
+        const innerRegex = /\{([^{}#%/]*)\}/g
+        const innerTags = new Set<string>()
+        let innerMatch
+        while ((innerMatch = innerRegex.exec(loopContent)) !== null) {
+          const innerTag = innerMatch[1].replace(/<[^>]*>/g, "").trim()
+          if (innerTag && innerTag !== loopKey) innerTags.add(innerTag)
+        }
+
+        const existing = fields.find(f => f.key === loopKey)
+        fieldMap.set(loopKey, {
+          key: loopKey,
+          label: existing?.label || (loopKey.charAt(0).toUpperCase() + loopKey.slice(1).replace(/_/g, " ")),
+          type: "table",
+          columns: Array.from(innerTags)
+        })
       }
 
-      const newFields: TemplateField[] = Array.from(foundTags).map((tag) => {
-        // Try to keep existing labels if keys match
-        const existing = fields.find(f => f.key === tag)
-        if (existing) return existing
+      // 2. Detect regular tags (excluding what we found in loops)
+      const tagRegex = /\{([^{}]*)\}/g
+      let tagMatch
+      while ((tagMatch = tagRegex.exec(content)) !== null) {
+         const rawTag = tagMatch[1].replace(/<[^>]*>/g, "").trim()
+         if (!rawTag) continue
 
-        return {
-          key: tag,
-          label: tag.charAt(0).toUpperCase() + tag.slice(1).replace(/_/g, " "),
-          type: tag.includes("foto") || tag.includes("imagem") || tag.includes("image") ? "image" : "text",
-        }
-      })
+         let cleanKey = rawTag
+         let type: "text" | "image" | "table" = "text"
 
-      setFields(newFields)
+         if (rawTag.startsWith("%")) {
+            cleanKey = rawTag.slice(1)
+            type = "image"
+         } else if (rawTag.startsWith("#")) {
+            cleanKey = rawTag.slice(1)
+            type = "table"
+         } else if (rawTag.startsWith("/") || rawTag.startsWith("@") || rawTag.startsWith("^")) {
+            continue
+         }
+
+         if (fieldMap.has(cleanKey)) continue
+
+         const existing = fields.find(f => f.key === cleanKey)
+         fieldMap.set(cleanKey, {
+           key: cleanKey,
+           label: existing?.label || (cleanKey.charAt(0).toUpperCase() + cleanKey.slice(1).replace(/_/g, " ")),
+           type: existing?.type || type,
+           columns: existing?.type === 'table' ? (existing.columns || []) : (type === 'table' ? [] : undefined)
+         })
+      }
+
+      setFields(Array.from(fieldMap.values()))
     } catch (err) {
       console.error("Scanning error", err)
       alert("Erro ao ler o arquivo. Certifique-se de que é um .docx válido.")
@@ -140,9 +178,21 @@ export default function EditTemplatePage() {
     if (!user || !id || !templateName) return
     setIsUploading(true)
     try {
+      const cleanFields = fields.map(f => {
+        const cleanField: any = {
+          key: f.key,
+          label: f.label,
+          type: f.type,
+        }
+        if (f.type === 'table') {
+          cleanField.columns = f.columns || []
+        }
+        return cleanField as TemplateField
+      })
+
       let updates: Partial<DocumentTemplate> = {
         name: templateName,
-        fields,
+        fields: cleanFields,
         category,
         subcategory,
       }
@@ -256,19 +306,60 @@ export default function EditTemplatePage() {
                 <div className="space-y-4">
                   {fields.map((field, index) => (
                     <motion.div key={field.key} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} className="bg-muted/20 flex flex-col items-start gap-4 rounded-2xl border border-white/5 p-5 md:flex-row md:items-end">
-                      <div className="flex-1 space-y-2">
-                        <Label className="text-brand-500 text-[10px] font-black tracking-tighter uppercase">Chave: <span className="text-foreground">{field.key}</span></Label>
-                        <Input value={field.label} onChange={(e) => updateField(index, { label: e.target.value })} className="bg-background/40" />
+                      <div className="flex w-full flex-col gap-4">
+                        <div className="flex w-full flex-col items-start gap-4 md:flex-row md:items-end">
+                            <div className="flex-1 space-y-2">
+                                <Label className="text-brand-500 text-[10px] font-black tracking-tighter uppercase">Chave: <span className="text-foreground">{field.key}</span></Label>
+                                <Input value={field.label} onChange={(e) => updateField(index, { label: e.target.value })} className="bg-background/40" />
+                            </div>
+                            <div className="w-full space-y-2 md:w-48">
+                                <Label className="text-muted-foreground text-[10px] font-black uppercase">Tipo</Label>
+                                <Select value={field.type} onChange={(e) => updateField(index, { type: e.target.value as any, columns: e.target.value === 'table' ? (field.columns || []) : undefined })} className="bg-background/40">
+                                <option value="text">Texto</option>
+                                <option value="image">Imagem</option>
+                                <option value="table">Tabela</option>
+                                </Select>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => removeField(index)} className="mb-0.5 rounded-xl text-red-100 hover:bg-red-500/10"><Trash2 size={18} /></Button>
+                        </div>
+
+                        {field.type === 'table' && (
+                            <div className="bg-brand-500/5 w-full space-y-3 rounded-2xl border border-brand-500/10 p-4">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-brand-500 text-[10px] font-black uppercase">
+                                        Colunas da Tabela
+                                    </Label>
+                                    <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        onClick={() => {
+                                            const col = prompt("Nome da etiqueta no Word (ex: preco)")
+                                            if (col) updateField(index, { columns: [...(field.columns || []), col] })
+                                        }}
+                                        className="h-7 rounded-lg px-2 text-[10px]"
+                                    >
+                                        + Add Coluna
+                                    </Button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {(field.columns || []).map((col, colIdx) => (
+                                        <div key={colIdx} className="bg-brand-500/10 text-brand-400 border-brand-500/20 flex items-center gap-2 rounded-lg border px-2 py-1 text-[10px] font-bold">
+                                            {col}
+                                            <button 
+                                                onClick={() => updateField(index, { columns: (field.columns || []).filter((_, i) => i !== colIdx) })} 
+                                                className="hover:text-red-400 transition-colors"
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {(field.columns || []).length === 0 && (
+                                        <p className="text-muted-foreground text-[10px] italic opacity-50">Nenhuma coluna definida. Use # ou adicione manualmente.</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                       </div>
-                      <div className="w-full space-y-2 md:w-48">
-                        <Label className="text-muted-foreground text-[10px] font-black uppercase">Tipo</Label>
-                        <Select value={field.type} onChange={(e) => updateField(index, { type: e.target.value as any })} className="bg-background/40">
-                          <option value="text">Texto</option>
-                          <option value="image">Imagem</option>
-                          <option value="table">Tabela</option>
-                        </Select>
-                      </div>
-                      <Button variant="ghost" size="icon" onClick={() => removeField(index)} className="mb-0.5 rounded-xl text-red-400 hover:bg-red-500/10"><Trash2 size={18} /></Button>
                     </motion.div>
                   ))}
                 </div>

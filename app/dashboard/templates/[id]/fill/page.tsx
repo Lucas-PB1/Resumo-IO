@@ -15,6 +15,7 @@ import {
   X,
   PlusCircle,
   Table as TableIcon,
+  Sparkles,
 } from "lucide-react"
 import { motion } from "motion/react"
 import Link from "next/link"
@@ -95,6 +96,8 @@ export default function FillReportPage({
 
         if (tplData) {
           setTemplate(tplData)
+          
+
           const editData = docs.find(d => d.id === editDocId)
           
           if (editData && editData.formData) {
@@ -107,6 +110,8 @@ export default function FillReportPage({
                const tableData = editData.formData?.[f.key]
                if (Array.isArray(tableData) && tableData.length > 0) {
                  colsMap[f.key] = Object.keys(tableData[0])
+               } else if (f.columns && f.columns.length > 0) {
+                 colsMap[f.key] = f.columns
                } else {
                  colsMap[f.key] = ["item"] // default
                }
@@ -117,7 +122,9 @@ export default function FillReportPage({
             const colsMap: Record<string, string[]> = {}
             tplData.fields.forEach((f) => {
               initialData[f.key] = f.type === "table" ? [] : ""
-              if (f.type === 'table') colsMap[f.key] = ["item"] // default first column
+              if (f.type === 'table') {
+                colsMap[f.key] = (f.columns && f.columns.length > 0) ? f.columns : ["item"]
+              }
             })
             setFormData(initialData)
             setTableColumns(colsMap)
@@ -212,9 +219,13 @@ export default function FillReportPage({
       const templateBuffer = await generatorService.fetchBuffer(
         template.fileUrl
       )
+      const fieldTypes: Record<string, string> = {}
+      template.fields.forEach(f => fieldTypes[f.key] = f.type)
+
       const docxBlob = await generatorService.generateDocx(
         templateBuffer,
-        formData
+        formData,
+        fieldTypes
       )
 
       const baseName = editingDoc ? editingDoc.fileName.replace(/\.(docx|pdf)$/, "") : `${template.name}_${Date.now()}`
@@ -455,6 +466,16 @@ export default function FillReportPage({
                         }}
                       />
                     </div>
+                    
+                    <div className="bg-brand-500/5 border-brand-500/10 rounded-xl border p-3">
+                      <p className="text-brand-400 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                        <Sparkles size={12} /> Inteligência Automática
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs font-medium">
+                        Campo configurado como <span className="text-brand-500 font-bold">Imagem</span>. O sistema converterá as etiquetas no Word automaticamente durante a geração.
+                      </p>
+                    </div>
+
                     {formData[field.key] && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}

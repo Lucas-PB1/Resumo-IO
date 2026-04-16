@@ -23,6 +23,7 @@ export interface TemplateField {
   key: string
   label: string
   type: "text" | "image" | "table"
+  columns?: string[] // For tables
 }
 
 export interface DocumentTemplate {
