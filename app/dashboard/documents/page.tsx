@@ -18,7 +18,10 @@ import {
   documentService,
   GeneratedDocument,
 } from "@/features/documents/services/document.service"
-import { Category, taxonomyService } from "@/features/documents/services/taxonomy.service"
+import {
+  Category,
+  taxonomyService,
+} from "@/features/documents/services/taxonomy.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -33,8 +36,10 @@ export default function DocumentsPage() {
   const [categoryFilter, setCategoryFilter] = useState("TODOS")
   const [subcategoryFilter, setSubcategoryFilter] = useState("TODOS")
   const [authorFilter, setAuthorFilter] = useState("TODOS")
-  const [registeredCategories, setRegisteredCategories] = useState<Category[]>([])
-  
+  const [registeredCategories, setRegisteredCategories] = useState<Category[]>(
+    []
+  )
+
   // Edit Modal State
   const [editingDoc, setEditingDoc] = useState<GeneratedDocument | null>(null)
   const [editForm, setEditForm] = useState({
@@ -50,7 +55,7 @@ export default function DocumentsPage() {
       try {
         const [docs, cats] = await Promise.all([
           documentService.getDocuments(user.uid),
-          taxonomyService.getCategories(user.uid)
+          taxonomyService.getCategories(user.uid),
         ])
         setDocuments(docs)
         setRegisteredCategories(cats)
@@ -64,10 +69,13 @@ export default function DocumentsPage() {
   }, [user])
 
   const handleDelete = async (id: string, storagePath: string) => {
-    if (!confirm("Tem certeza que deseja excluir este documento permanentemente?")) return
+    if (
+      !confirm("Tem certeza que deseja excluir este documento permanentemente?")
+    )
+      return
     try {
       await documentService.deleteDocument(id, storagePath)
-      setDocuments(prev => prev.filter(d => d.id !== id))
+      setDocuments((prev) => prev.filter((d) => d.id !== id))
     } catch (err) {
       console.error("Delete error", err)
       alert("Erro ao excluir documento.")
@@ -88,7 +96,9 @@ export default function DocumentsPage() {
     setIsUpdating(true)
     try {
       await documentService.updateDocument(editingDoc.id!, editForm)
-      setDocuments(prev => prev.map(d => d.id === editingDoc.id ? { ...d, ...editForm } : d))
+      setDocuments((prev) =>
+        prev.map((d) => (d.id === editingDoc.id ? { ...d, ...editForm } : d))
+      )
       setEditingDoc(null)
     } catch (err) {
       console.error("Update error", err)
@@ -118,17 +128,22 @@ export default function DocumentsPage() {
 
   const uniqueCategories = [
     "TODOS",
-    ...Array.from(new Set([
-      ...documents.map((d) => d.category).filter(Boolean),
-      ...registeredCategories.map((c) => c.name)
-    ])),
+    ...Array.from(
+      new Set([
+        ...documents.map((d) => d.category).filter(Boolean),
+        ...registeredCategories.map((c) => c.name),
+      ])
+    ),
   ]
   const uniqueSubcategories = [
     "TODOS",
-    ...Array.from(new Set([
-      ...documents.map((d) => d.subcategory).filter(Boolean),
-      ...(registeredCategories.find(c => c.name === categoryFilter)?.subcategories || [])
-    ])),
+    ...Array.from(
+      new Set([
+        ...documents.map((d) => d.subcategory).filter(Boolean),
+        ...(registeredCategories.find((c) => c.name === categoryFilter)
+          ?.subcategories || []),
+      ])
+    ),
   ]
   const uniqueAuthors = [
     "TODOS",
@@ -221,7 +236,7 @@ export default function DocumentsPage() {
       <Card className="bg-card/60 border-none shadow-2xl backdrop-blur-md">
         <CardContent className="p-0">
           {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-muted/20 border-b border-white/5">
@@ -321,7 +336,7 @@ export default function DocumentsPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDelete(doc.id!, doc.storagePath)}
-                          className="hover:bg-red-500/10 h-9 w-9 rounded-xl text-red-400 hover:text-red-500"
+                          className="h-9 w-9 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-500"
                         >
                           <Trash2 size={18} />
                         </Button>
@@ -341,7 +356,7 @@ export default function DocumentsPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="p-6 space-y-4"
+                className="space-y-4 p-6"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
@@ -349,7 +364,7 @@ export default function DocumentsPage() {
                       <FileText size={24} />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-foreground font-bold leading-tight break-all">
+                      <p className="text-foreground leading-tight font-bold break-all">
                         {doc.fileName}
                       </p>
                       <p className="text-muted-foreground text-sm font-medium">
@@ -388,22 +403,22 @@ export default function DocumentsPage() {
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-2">
-                   <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openEditModal(doc)}
-                      className="hover:bg-brand-500/10 hover:text-brand-500 rounded-xl"
-                    >
-                      <Pencil size={18} className="mr-2" /> Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDelete(doc.id!, doc.storagePath)}
-                      className="hover:bg-red-500/10 text-red-400 hover:text-red-500 rounded-xl"
-                    >
-                      <Trash2 size={18} className="mr-2" /> Excluir
-                    </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => openEditModal(doc)}
+                    className="hover:bg-brand-500/10 hover:text-brand-500 rounded-xl"
+                  >
+                    <Pencil size={18} className="mr-2" /> Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(doc.id!, doc.storagePath)}
+                    className="rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-500"
+                  >
+                    <Trash2 size={18} className="mr-2" /> Excluir
+                  </Button>
                   <a
                     href={doc.fileUrl}
                     target="_blank"
@@ -448,81 +463,128 @@ export default function DocumentsPage() {
             >
               <div className="bg-brand-500/10 flex items-center justify-between p-8">
                 <div className="space-y-1">
-                  <h3 className="text-2xl font-black tracking-tight">Editar Documento</h3>
-                  <p className="text-muted-foreground text-sm font-medium">Ajuste os detalhes do seu documento gerado.</p>
+                  <h3 className="text-2xl font-black tracking-tight">
+                    Editar Documento
+                  </h3>
+                  <p className="text-muted-foreground text-sm font-medium">
+                    Ajuste os detalhes do seu documento gerado.
+                  </p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setEditingDoc(null)} className="rounded-full hover:bg-white/5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditingDoc(null)}
+                  className="rounded-full hover:bg-white/5"
+                >
                   <X size={20} />
                 </Button>
               </div>
 
               <div className="space-y-6 p-8">
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs font-black uppercase tracking-widest">Nome do Arquivo</Label>
-                  <Input 
-                    value={editForm.fileName} 
-                    onChange={(e) => setEditForm(prev => ({ ...prev, fileName: e.target.value }))}
-                    className="bg-white/5 h-12 rounded-2xl border-none font-bold"
+                  <Label className="text-muted-foreground text-xs font-black tracking-widest uppercase">
+                    Nome do Arquivo
+                  </Label>
+                  <Input
+                    value={editForm.fileName}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        fileName: e.target.value,
+                      }))
+                    }
+                    className="h-12 rounded-2xl border-none bg-white/5 font-bold"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-muted-foreground text-xs font-black uppercase tracking-widest">Categoria</Label>
-                    <Select 
+                    <Label className="text-muted-foreground text-xs font-black tracking-widest uppercase">
+                      Categoria
+                    </Label>
+                    <Select
                       value={editForm.category}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value, subcategory: "" }))}
-                      className="bg-white/5 h-12 rounded-2xl border-none font-bold"
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          category: e.target.value,
+                          subcategory: "",
+                        }))
+                      }
+                      className="h-12 rounded-2xl border-none bg-white/5 font-bold"
                     >
                       <option value="">Selecione...</option>
-                      {registeredCategories.map(c => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
+                      {registeredCategories.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name}
+                        </option>
                       ))}
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-muted-foreground text-xs font-black uppercase tracking-widest">Subcategoria</Label>
-                    <Select 
-                       value={editForm.subcategory}
-                       onChange={(e) => setEditForm(prev => ({ ...prev, subcategory: e.target.value }))}
-                       className="bg-white/5 h-12 rounded-2xl border-none font-bold"
-                       disabled={!editForm.category}
+                    <Label className="text-muted-foreground text-xs font-black tracking-widest uppercase">
+                      Subcategoria
+                    </Label>
+                    <Select
+                      value={editForm.subcategory}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          subcategory: e.target.value,
+                        }))
+                      }
+                      className="h-12 rounded-2xl border-none bg-white/5 font-bold"
+                      disabled={!editForm.category}
                     >
                       <option value="">Selecione...</option>
-                      {registeredCategories.find(c => c.name === editForm.category)?.subcategories.map(sub => (
-                        <option key={sub} value={sub}>{sub}</option>
-                      ))}
+                      {registeredCategories
+                        .find((c) => c.name === editForm.category)
+                        ?.subcategories.map((sub) => (
+                          <option key={sub} value={sub}>
+                            {sub}
+                          </option>
+                        ))}
                     </Select>
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-4 p-8 pt-0">
-                <Button variant="ghost" onClick={() => setEditingDoc(null)} className="h-12 flex-1 rounded-2xl font-bold">
+                <Button
+                  variant="ghost"
+                  onClick={() => setEditingDoc(null)}
+                  className="h-12 flex-1 rounded-2xl font-bold"
+                >
                   Cancelar
                 </Button>
-                <Button 
-                  onClick={handleUpdate} 
+                <Button
+                  onClick={handleUpdate}
                   disabled={isUpdating}
                   className="bg-brand-500 shadow-brand-500/20 h-12 flex-1 gap-2 rounded-2xl font-black shadow-xl"
                 >
-                  {isUpdating ? "Salvando..." : <><Save size={18} /> Salvar Alterações</>}
+                  {isUpdating ? (
+                    "Salvando..."
+                  ) : (
+                    <>
+                      <Save size={18} /> Salvar Alterações
+                    </>
+                  )}
                 </Button>
               </div>
 
               <div className="border-t border-white/5 p-8 pt-6">
-                 <Button
-                    variant="outline"
-                    className="border-brand-500/20 text-brand-400 hover:bg-brand-500 h-14 w-full gap-3 rounded-2xl border-2 font-black transition-all hover:text-white"
-                    onClick={() => {
-                        window.location.href = `/dashboard/templates/${editingDoc.templateId}/fill?editDocId=${editingDoc.id}`
-                    }}
-                 >
-                    <ArrowUpRight size={20} /> Editar Conteúdo e Regenerar
-                 </Button>
-                 <p className="text-muted-foreground mt-3 text-center text-[10px] font-medium uppercase tracking-widest opacity-50">
-                    Você voltará ao formulário com os dados preenchidos.
-                 </p>
+                <Button
+                  variant="outline"
+                  className="border-brand-500/20 text-brand-400 hover:bg-brand-500 h-14 w-full gap-3 rounded-2xl border-2 font-black transition-all hover:text-white"
+                  onClick={() => {
+                    window.location.href = `/dashboard/templates/${editingDoc.templateId}/fill?editDocId=${editingDoc.id}`
+                  }}
+                >
+                  <ArrowUpRight size={20} /> Editar Conteúdo e Regenerar
+                </Button>
+                <p className="text-muted-foreground mt-3 text-center text-[10px] font-medium tracking-widest uppercase opacity-50">
+                  Você voltará ao formulário com os dados preenchidos.
+                </p>
               </div>
             </motion.div>
           </motion.div>

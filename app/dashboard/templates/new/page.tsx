@@ -22,7 +22,10 @@ import {
   templateService,
   TemplateField,
 } from "@/features/documents/services/template.service"
-import { taxonomyService, Category } from "@/features/documents/services/taxonomy.service"
+import {
+  taxonomyService,
+  Category,
+} from "@/features/documents/services/taxonomy.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -56,12 +59,14 @@ export default function NewTemplatePage() {
     async function fetchData() {
       if (!user) return
       try {
-        const { userService } = await import("@/features/user/services/user.service")
-        const { taxonomyService } = await import("@/features/documents/services/taxonomy.service")
-        
+        const { userService } =
+          await import("@/features/user/services/user.service")
+        const { taxonomyService } =
+          await import("@/features/documents/services/taxonomy.service")
+
         const [profile, catData] = await Promise.all([
           userService.getUserProfile(user.uid),
-          taxonomyService.getCategories(user.uid)
+          taxonomyService.getCategories(user.uid),
         ])
 
         if (profile) {
@@ -69,7 +74,7 @@ export default function NewTemplatePage() {
         } else if (user.displayName) {
           setAuthorName(user.displayName)
         }
-        
+
         setCategories(catData)
       } catch (err) {
         console.error("Failed to fetch data", err)
@@ -79,7 +84,7 @@ export default function NewTemplatePage() {
   }, [user])
 
   const handleCategoryChange = (val: string) => {
-    const cat = categories.find(c => c.name === val)
+    const cat = categories.find((c) => c.name === val)
     setCategory(val)
     setSelectedCategoryId(cat?.id || "")
     setSubcategory("") // Reset subcategory when category changes
@@ -92,71 +97,50 @@ export default function NewTemplatePage() {
       const zip = new PizZip(arrayBuffer)
       const content = zip.files["word/document.xml"].asText()
 
-      // 1. Detect Loops and their columns
-      // Regex to find {#tag}...{/tag}
-      const loopRegex = /\{#([^}]+)\}([\s\S]*?)\{\/\1\}/g
-      const fieldMap = new Map<string, TemplateField>()
-      let loopMatch
-
-      while ((loopMatch = loopRegex.exec(content)) !== null) {
-        const loopKey = loopMatch[1].replace(/<[^>]*>/g, "").trim()
-        const loopContent = loopMatch[2]
-        
-        // Find tags inside this loop
-        const innerRegex = /\{([^{}#%/]*)\}/g
-        const innerTags = new Set<string>()
-        let innerMatch
-        while ((innerMatch = innerRegex.exec(loopContent)) !== null) {
-          const innerTag = innerMatch[1].replace(/<[^>]*>/g, "").trim()
-          if (innerTag && innerTag !== loopKey) innerTags.add(innerTag)
-        }
-
-        fieldMap.set(loopKey, {
-          key: loopKey,
-          label: loopKey.charAt(0).toUpperCase() + loopKey.slice(1).replace(/_/g, " "),
-          type: "table",
-          columns: Array.from(innerTags)
-        })
-      }
-
-      // 2. Detect regular tags (excluding what we found in loops)
       const tagRegex = /\{([^{}]*)\}/g
       let tagMatch
+      const foundTags = new Set<string>()
+
       while ((tagMatch = tagRegex.exec(content)) !== null) {
-         const rawTag = tagMatch[1].replace(/<[^>]*>/g, "").trim()
-         if (!rawTag) continue
-
-         let cleanKey = rawTag
-         let type: "text" | "image" | "table" = "text"
-
-         if (rawTag.startsWith("%")) {
-            cleanKey = rawTag.slice(1)
-            type = "image"
-         } else if (rawTag.startsWith("#")) {
-            cleanKey = rawTag.slice(1)
-            type = "table"
-         } else if (rawTag.startsWith("/") || rawTag.startsWith("@") || rawTag.startsWith("^")) {
-            continue
-         } else if (
-          rawTag.toLowerCase().includes("foto") ||
-          rawTag.toLowerCase().includes("imagem") ||
-          rawTag.toLowerCase().includes("image")
-         ) {
-           type = "image"
-         }
-
-         // If we already detected this as a loop, skip it or merge
-         if (fieldMap.has(cleanKey)) continue
-
-         fieldMap.set(cleanKey, {
-           key: cleanKey,
-           label: cleanKey.charAt(0).toUpperCase() + cleanKey.slice(1).replace(/_/g, " "),
-           type: type,
-           columns: type === 'table' ? [] : undefined
-         })
+        const rawTag = tagMatch[1].replace(/<[^>]*>/g, "").trim()
+        if (!rawTag) continue
+        foundTags.add(rawTag)
       }
 
-      setFields(Array.from(fieldMap.values()))
+      const newFields: TemplateField[] = Array.from(foundTags)
+        .map((tag) => {
+          let cleanKey = tag
+          let type: "text" | "image" = "text"
+
+          if (tag.startsWith("%")) {
+            cleanKey = tag.slice(1)
+            type = "image"
+          } else if (
+            tag.startsWith("/") ||
+            tag.startsWith("@") ||
+            tag.startsWith("^") ||
+            tag.startsWith("#")
+          ) {
+            return null
+          } else if (
+            tag.toLowerCase().includes("foto") ||
+            tag.toLowerCase().includes("imagem") ||
+            tag.toLowerCase().includes("image")
+          ) {
+            type = "image"
+          }
+
+          return {
+            key: cleanKey,
+            label:
+              cleanKey.charAt(0).toUpperCase() +
+              cleanKey.slice(1).replace(/_/g, " "),
+            type,
+          }
+        })
+        .filter((f): f is TemplateField => f !== null)
+
+      setFields(newFields)
     } catch (err) {
       console.error("Scanning error", err)
       alert("Erro ao ler o arquivo. Certifique-se de que é um .docx válido.")
@@ -182,28 +166,17 @@ export default function NewTemplatePage() {
         file,
         user.uid
       )
-      const cleanFields = fields.map(f => {
-        const cleanField: any = {
-          key: f.key,
-          label: f.label,
-          type: f.type,
-        }
-        if (f.type === 'table') {
-          cleanField.columns = f.columns || []
-        }
-        return cleanField as TemplateField
-      })
-
       await templateService.saveTemplate({
         name: templateName,
         fileUrl,
         storagePath,
-        fields: cleanFields,
+        fields,
         ownerId: user.uid,
         category,
         subcategory,
         authorId: user.uid,
-        authorName: authorName || user.displayName || user.email || "Autor Desconhecido",
+        authorName:
+          authorName || user.displayName || user.email || "Autor Desconhecido",
       })
       router.push("/dashboard/templates")
     } catch (err) {
@@ -276,8 +249,10 @@ export default function NewTemplatePage() {
                     className="bg-muted/20"
                   >
                     <option value="">Selecione...</option>
-                    {categories.map(c => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
                     ))}
                   </Select>
                 </div>
@@ -292,9 +267,13 @@ export default function NewTemplatePage() {
                     disabled={!category}
                   >
                     <option value="">Selecione...</option>
-                    {categories.find(c => c.id === selectedCategoryId)?.subcategories.map(sub => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))}
+                    {categories
+                      .find((c) => c.id === selectedCategoryId)
+                      ?.subcategories.map((sub) => (
+                        <option key={sub} value={sub}>
+                          {sub}
+                        </option>
+                      ))}
                   </Select>
                 </div>
               </div>
@@ -356,7 +335,9 @@ export default function NewTemplatePage() {
               <div className="space-y-2">
                 <p className="text-foreground font-bold">2. Imagens e Fotos</p>
                 <p className="text-muted-foreground leading-relaxed">
-                  No Word, use o símbolo <span className="text-brand-500 font-bold">%</span> para imagens:{" "}
+                  No Word, use o símbolo{" "}
+                  <span className="text-brand-500 font-bold">%</span> para
+                  imagens:{" "}
                   <code className="bg-brand-500/10 text-brand-500 rounded-md px-1.5 py-0.5 font-mono">{`{%foto_vistoria}`}</code>
                   . Isso garante que o sistema insira a foto e não o texto.
                 </p>
@@ -405,85 +386,43 @@ export default function NewTemplatePage() {
                       transition={{ delay: index * 0.05 }}
                       className="bg-muted/20 flex flex-col items-start gap-4 rounded-2xl border border-white/5 p-5 md:flex-row md:items-end"
                     >
-                      <div className="flex w-full flex-col gap-4">
-                        <div className="flex w-full flex-col items-start gap-4 md:flex-row md:items-end">
-                            <div className="flex-1 space-y-2">
-                                <Label className="text-brand-500 text-[10px] font-black tracking-tighter uppercase">
-                                Chave do Word:{" "}
-                                <span className="text-foreground">{field.key}</span>
-                                </Label>
-                                <Input
-                                value={field.label}
-                                onChange={(e) =>
-                                    updateField(index, { label: e.target.value })
-                                }
-                                placeholder="Nome amigável para o formulário"
-                                className="bg-background/40"
-                                />
-                            </div>
-                            <div className="w-full space-y-2 md:w-48">
-                                <Label className="text-muted-foreground text-[10px] font-black uppercase">
-                                Tipo do Campo
-                                </Label>
-                                <Select
-                                value={field.type}
-                                onChange={(e) =>
-                                    updateField(index, { type: e.target.value as any, columns: e.target.value === 'table' ? (field.columns || []) : undefined })
-                                }
-                                className="bg-background/40"
-                                >
-                                <option value="text">Texto Simples</option>
-                                <option value="image">Imagem / Foto</option>
-                                <option value="table">Tabela (Lista)</option>
-                                </Select>
-                            </div>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeField(index)}
-                                className="mb-0.5 rounded-xl text-red-400 hover:bg-red-500/10"
-                            >
-                                <Trash2 size={18} />
-                            </Button>
-                        </div>
-
-                        {field.type === 'table' && (
-                            <div className="bg-brand-500/5 w-full space-y-3 rounded-2xl border border-brand-500/10 p-4">
-                                <div className="flex items-center justify-between">
-                                    <Label className="text-brand-500 text-[10px] font-black uppercase">
-                                        Colunas da Tabela (Etiquetas internas)
-                                    </Label>
-                                    <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        onClick={() => {
-                                            const col = prompt("Nome da etiqueta no Word (ex: preco)")
-                                            if (col) updateField(index, { columns: [...(field.columns || []), col] })
-                                        }}
-                                        className="h-7 rounded-lg px-2 text-[10px]"
-                                    >
-                                        + Add Coluna
-                                    </Button>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {(field.columns || []).map((col, colIdx) => (
-                                        <div key={colIdx} className="bg-brand-500/10 text-brand-400 border-brand-500/20 flex items-center gap-2 rounded-lg border px-2 py-1 text-[10px] font-bold">
-                                            {col}
-                                            <button 
-                                                onClick={() => updateField(index, { columns: (field.columns || []).filter((_, i) => i !== colIdx) })} 
-                                                className="hover:text-red-400 transition-colors"
-                                            >
-                                                <X size={10} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    {(field.columns || []).length === 0 && (
-                                        <p className="text-muted-foreground text-[10px] italic opacity-50">Nenhuma coluna definida. Use # ou adicione manualmente.</p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
+                      <div className="flex-1 space-y-2">
+                        <Label className="text-brand-500 text-[10px] font-black tracking-tighter uppercase">
+                          Chave do Word:{" "}
+                          <span className="text-foreground">{field.key}</span>
+                        </Label>
+                        <Input
+                          value={field.label}
+                          onChange={(e) =>
+                            updateField(index, { label: e.target.value })
+                          }
+                          placeholder="Nome amigável para o formulário"
+                          className="bg-background/40"
+                        />
                       </div>
+                      <div className="w-full space-y-2 md:w-48">
+                        <Label className="text-muted-foreground text-[10px] font-black uppercase">
+                          Tipo do Campo
+                        </Label>
+                        <Select
+                          value={field.type}
+                          onChange={(e) =>
+                            updateField(index, { type: e.target.value as any })
+                          }
+                          className="bg-background/40"
+                        >
+                          <option value="text">Texto Simples</option>
+                          <option value="image">Imagem / Foto</option>
+                        </Select>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeField(index)}
+                        className="mb-0.5 rounded-xl text-red-400 hover:bg-red-500/10"
+                      >
+                        <Trash2 size={18} />
+                      </Button>
                     </motion.div>
                   ))}
 

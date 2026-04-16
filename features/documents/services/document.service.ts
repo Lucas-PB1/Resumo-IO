@@ -59,14 +59,17 @@ export const documentService = {
   async deleteDocument(id: string, storagePath: string) {
     // Delete from Firestore first
     await deleteDoc(doc(db, DOCUMENTS_COLLECTION, id))
-    
+
     // Attempt to delete from Storage if path exists
     if (storagePath && storagePath.trim() !== "") {
       try {
         const storageRef = ref(storage, storagePath)
         await deleteObject(storageRef)
       } catch (err) {
-        console.warn("Could not delete physical file from Storage, it might have been moved or already deleted.", err)
+        console.warn(
+          "Could not delete physical file from Storage, it might have been moved or already deleted.",
+          err
+        )
       }
     }
   },

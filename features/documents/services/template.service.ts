@@ -22,8 +22,7 @@ import {
 export interface TemplateField {
   key: string
   label: string
-  type: "text" | "image" | "table"
-  columns?: string[] // For tables
+  type: "text" | "image"
 }
 
 export interface DocumentTemplate {
@@ -90,13 +89,16 @@ export const templateService = {
 
   async deleteTemplate(id: string, storagePath: string) {
     await deleteDoc(doc(db, TEMPLATES_COLLECTION, id))
-    
+
     if (storagePath && storagePath.trim() !== "") {
       try {
         const storageRef = ref(storage, storagePath)
         await deleteObject(storageRef)
       } catch (err) {
-        console.warn("Could not delete physical file from Storage, it might have been moved or already deleted.", err)
+        console.warn(
+          "Could not delete physical file from Storage, it might have been moved or already deleted.",
+          err
+        )
       }
     }
   },

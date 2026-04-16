@@ -17,22 +17,22 @@ export function MobileNav() {
   ]
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 md:hidden w-[90%] max-w-sm">
+    <div className="fixed bottom-6 left-1/2 z-50 w-[90%] max-w-sm -translate-x-1/2 md:hidden">
       <motion.nav
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="flex items-center justify-around bg-card/70 backdrop-blur-2xl border border-white/10 p-2 rounded-4xl shadow-2xl shadow-black/50"
+        className="bg-card/70 flex items-center justify-around rounded-4xl border border-white/10 p-2 shadow-2xl shadow-black/50 backdrop-blur-2xl"
       >
         {tabs.map((tab) => {
           const isActive = pathname === tab.path
           const Icon = tab.icon
 
           return (
-            <Link key={tab.path} href={tab.path} className="relative p-3 group">
+            <Link key={tab.path} href={tab.path} className="group relative p-3">
               {isActive && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute inset-0 bg-brand-500/10 rounded-2xl border border-brand-500/20"
+                  className="bg-brand-500/10 border-brand-500/20 absolute inset-0 rounded-2xl border"
                   transition={{ type: "spring", bounce: 0.3, duration: 0.6 }}
                 />
               )}
@@ -40,12 +40,16 @@ export function MobileNav() {
                 <Icon
                   size={20}
                   className={`transition-colors duration-300 ${
-                    isActive ? "text-brand-500" : "text-muted-foreground group-hover:text-foreground"
+                    isActive
+                      ? "text-brand-500"
+                      : "text-muted-foreground group-hover:text-foreground"
                   }`}
                 />
                 <span
-                  className={`text-[10px] font-black uppercase tracking-tighter transition-colors duration-300 ${
-                    isActive ? "text-brand-500" : "text-muted-foreground group-hover:text-foreground"
+                  className={`text-[10px] font-black tracking-tighter uppercase transition-colors duration-300 ${
+                    isActive
+                      ? "text-brand-500"
+                      : "text-muted-foreground group-hover:text-foreground"
                   }`}
                 >
                   {tab.name}

@@ -1,7 +1,16 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Plus, FileText, Trash2, Layout, Calendar, ArrowRight, Sparkles, Pencil } from "lucide-react"
+import {
+  Plus,
+  FileText,
+  Trash2,
+  Layout,
+  Calendar,
+  ArrowRight,
+  Sparkles,
+  Pencil,
+} from "lucide-react"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useAuth } from "@/features/auth/hooks/useAuth"
@@ -96,7 +105,7 @@ export default function TemplatesPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 rounded-xl bg-white/5 text-white/70 hover:bg-brand-500/20 hover:text-brand-400 backdrop-blur-md"
+                    className="hover:bg-brand-500/20 hover:text-brand-400 h-9 w-9 rounded-xl bg-white/5 text-white/70 backdrop-blur-md"
                   >
                     <Pencil size={16} />
                   </Button>
@@ -104,8 +113,10 @@ export default function TemplatesPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(template.id!, template.storagePath)}
-                  className="h-9 w-9 rounded-xl bg-white/5 text-red-400/70 hover:bg-red-500/20 hover:text-red-400 backdrop-blur-md"
+                  onClick={() =>
+                    handleDelete(template.id!, template.storagePath)
+                  }
+                  className="h-9 w-9 rounded-xl bg-white/5 text-red-400/70 backdrop-blur-md hover:bg-red-500/20 hover:text-red-400"
                 >
                   <Trash2 size={16} />
                 </Button>
@@ -115,16 +126,16 @@ export default function TemplatesPage() {
                 <div className="bg-brand-500/10 text-brand-500 mb-6 flex h-14 w-14 items-center justify-center rounded-2xl transition-transform group-hover:scale-110">
                   <FileText size={28} />
                 </div>
-                
+
                 {template.category && (
                   <div className="mb-3">
-                    <span className="bg-brand-500/10 text-brand-400 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-tight">
+                    <span className="bg-brand-500/10 text-brand-400 rounded-full px-3 py-1 text-[10px] font-black tracking-tight uppercase">
                       {template.category}
                     </span>
                   </div>
                 )}
-                
-                <CardTitle className="mb-2 text-2xl font-bold line-clamp-2 leading-tight">
+
+                <CardTitle className="mb-2 line-clamp-2 text-2xl leading-tight font-bold">
                   {template.name}
                 </CardTitle>
                 <CardDescription className="text-sm font-medium">
@@ -133,10 +144,11 @@ export default function TemplatesPage() {
               </CardHeader>
 
               <CardFooter className="p-8 pt-4">
-                <Link href={`/dashboard/templates/${template.id}/fill`} className="w-full">
-                  <Button
-                    className="shadow-brand-500/40 h-12 w-full gap-2 rounded-2xl font-black uppercase tracking-tighter shadow-xl"
-                  >
+                <Link
+                  href={`/dashboard/templates/${template.id}/fill`}
+                  className="w-full"
+                >
+                  <Button className="shadow-brand-500/40 h-12 w-full gap-2 rounded-2xl font-black tracking-tighter uppercase shadow-xl">
                     Preencher <ArrowRight size={18} />
                   </Button>
                 </Link>

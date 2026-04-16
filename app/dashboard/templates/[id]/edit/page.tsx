@@ -20,7 +20,10 @@ import {
   TemplateField,
   DocumentTemplate,
 } from "@/features/documents/services/template.service"
-import { taxonomyService, Category } from "@/features/documents/services/taxonomy.service"
+import {
+  taxonomyService,
+  Category,
+} from "@/features/documents/services/taxonomy.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -38,7 +41,7 @@ export default function EditTemplatePage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const { id } = useParams() as { id: string }
-  
+
   const [templateName, setTemplateName] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [fields, setFields] = useState<TemplateField[]>([])
@@ -49,8 +52,9 @@ export default function EditTemplatePage() {
   const [isUploading, setIsUploading] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [dataLoading, setDataLoading] = useState(true)
-  const [originalTemplate, setOriginalTemplate] = useState<DocumentTemplate | null>(null)
-  
+  const [originalTemplate, setOriginalTemplate] =
+    useState<DocumentTemplate | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -62,7 +66,7 @@ export default function EditTemplatePage() {
       try {
         const [template, catData] = await Promise.all([
           templateService.getTemplateById(id),
-          taxonomyService.getCategories(user.uid)
+          taxonomyService.getCategories(user.uid),
         ])
 
         if (template) {
@@ -71,11 +75,11 @@ export default function EditTemplatePage() {
           setFields(template.fields)
           setCategory(template.category || "")
           setSubcategory(template.subcategory || "")
-          
-          const foundCat = catData.find(c => c.name === template.category)
+
+          const foundCat = catData.find((c) => c.name === template.category)
           if (foundCat) setSelectedCategoryId(foundCat.id)
         }
-        
+
         setCategories(catData)
       } catch (err) {
         console.error("Failed to fetch data", err)
@@ -87,7 +91,7 @@ export default function EditTemplatePage() {
   }, [user, id, authLoading])
 
   const handleCategoryChange = (val: string) => {
-    const cat = categories.find(c => c.name === val)
+    const cat = categories.find((c) => c.name === val)
     setCategory(val)
     setSelectedCategoryId(cat?.id || "")
     setSubcategory("")
@@ -100,64 +104,53 @@ export default function EditTemplatePage() {
       const zip = new PizZip(arrayBuffer)
       const content = zip.files["word/document.xml"].asText()
 
-      // 1. Detect Loops and their columns
-      const loopRegex = /\{#([^}]+)\}([\s\S]*?)\{\/\1\}/g
-      const fieldMap = new Map<string, TemplateField>()
-      let loopMatch
-
-      while ((loopMatch = loopRegex.exec(content)) !== null) {
-        const loopKey = loopMatch[1].replace(/<[^>]*>/g, "").trim()
-        const loopContent = loopMatch[2]
-        
-        const innerRegex = /\{([^{}#%/]*)\}/g
-        const innerTags = new Set<string>()
-        let innerMatch
-        while ((innerMatch = innerRegex.exec(loopContent)) !== null) {
-          const innerTag = innerMatch[1].replace(/<[^>]*>/g, "").trim()
-          if (innerTag && innerTag !== loopKey) innerTags.add(innerTag)
-        }
-
-        const existing = fields.find(f => f.key === loopKey)
-        fieldMap.set(loopKey, {
-          key: loopKey,
-          label: existing?.label || (loopKey.charAt(0).toUpperCase() + loopKey.slice(1).replace(/_/g, " ")),
-          type: "table",
-          columns: Array.from(innerTags)
-        })
-      }
-
-      // 2. Detect regular tags (excluding what we found in loops)
       const tagRegex = /\{([^{}]*)\}/g
       let tagMatch
+      const foundTags = new Set<string>()
+
       while ((tagMatch = tagRegex.exec(content)) !== null) {
-         const rawTag = tagMatch[1].replace(/<[^>]*>/g, "").trim()
-         if (!rawTag) continue
-
-         let cleanKey = rawTag
-         let type: "text" | "image" | "table" = "text"
-
-         if (rawTag.startsWith("%")) {
-            cleanKey = rawTag.slice(1)
-            type = "image"
-         } else if (rawTag.startsWith("#")) {
-            cleanKey = rawTag.slice(1)
-            type = "table"
-         } else if (rawTag.startsWith("/") || rawTag.startsWith("@") || rawTag.startsWith("^")) {
-            continue
-         }
-
-         if (fieldMap.has(cleanKey)) continue
-
-         const existing = fields.find(f => f.key === cleanKey)
-         fieldMap.set(cleanKey, {
-           key: cleanKey,
-           label: existing?.label || (cleanKey.charAt(0).toUpperCase() + cleanKey.slice(1).replace(/_/g, " ")),
-           type: existing?.type || type,
-           columns: existing?.type === 'table' ? (existing.columns || []) : (type === 'table' ? [] : undefined)
-         })
+        const rawTag = tagMatch[1].replace(/<[^>]*>/g, "").trim()
+        if (!rawTag) continue
+        foundTags.add(rawTag)
       }
 
-      setFields(Array.from(fieldMap.values()))
+      const newFields: TemplateField[] = Array.from(foundTags)
+        .map((tag) => {
+          let cleanKey = tag
+          let type: "text" | "image" = "text"
+
+          if (tag.startsWith("%")) {
+            cleanKey = tag.slice(1)
+            type = "image"
+          } else if (
+            tag.startsWith("/") ||
+            tag.startsWith("@") ||
+            tag.startsWith("^") ||
+            tag.startsWith("#")
+          ) {
+            return null
+          } else if (
+            tag.toLowerCase().includes("foto") ||
+            tag.toLowerCase().includes("imagem") ||
+            tag.toLowerCase().includes("image")
+          ) {
+            type = "image"
+          }
+
+          const existing = fields.find((f) => f.key === cleanKey)
+          if (existing) return existing
+
+          return {
+            key: cleanKey,
+            label:
+              cleanKey.charAt(0).toUpperCase() +
+              cleanKey.slice(1).replace(/_/g, " "),
+            type,
+          }
+        })
+        .filter((f): f is TemplateField => f !== null)
+
+      setFields(newFields)
     } catch (err) {
       console.error("Scanning error", err)
       alert("Erro ao ler o arquivo. Certifique-se de que é um .docx válido.")
@@ -178,30 +171,19 @@ export default function EditTemplatePage() {
     if (!user || !id || !templateName) return
     setIsUploading(true)
     try {
-      const cleanFields = fields.map(f => {
-        const cleanField: any = {
-          key: f.key,
-          label: f.label,
-          type: f.type,
-        }
-        if (f.type === 'table') {
-          cleanField.columns = f.columns || []
-        }
-        return cleanField as TemplateField
-      })
-
       let updates: Partial<DocumentTemplate> = {
         name: templateName,
-        fields: cleanFields,
+        fields,
         category,
         subcategory,
       }
 
       if (file) {
-        const { fileUrl, storagePath } = await templateService.uploadTemplateFile(file, user.uid)
+        const { fileUrl, storagePath } =
+          await templateService.uploadTemplateFile(file, user.uid)
         updates.fileUrl = fileUrl
         updates.storagePath = storagePath
-        
+
         // Cleanup old file? (Optional, but good practice)
         // if (originalTemplate?.storagePath) templateService.deleteObject(ref(storage, originalTemplate.storagePath))
       }
@@ -226,60 +208,123 @@ export default function EditTemplatePage() {
     setFields(fields.filter((_, i) => i !== index))
   }
 
-  if (authLoading || (dataLoading && user)) return <div className="p-12 animate-pulse text-center text-muted-foreground">Carregando dados do modelo...</div>
+  if (authLoading || (dataLoading && user))
+    return (
+      <div className="text-muted-foreground animate-pulse p-12 text-center">
+        Carregando dados do modelo...
+      </div>
+    )
 
   return (
     <div className="space-y-10">
       <div className="flex items-center gap-6">
         <Link href="/dashboard/templates">
-          <Button variant="ghost" size="icon" className="hover:bg-brand-500/10 text-brand-500 rounded-xl">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:bg-brand-500/10 text-brand-500 rounded-xl"
+          >
             <ArrowLeft />
           </Button>
         </Link>
         <div className="space-y-1">
-          <h1 className="text-foreground text-4xl font-black tracking-tight">Editar Modelo</h1>
-          <p className="text-foreground/70 text-lg font-medium">Modifique as configurações e etiquetas deste modelo.</p>
+          <h1 className="text-foreground text-4xl font-black tracking-tight">
+            Editar Modelo
+          </h1>
+          <p className="text-foreground/70 text-lg font-medium">
+            Modifique as configurações e etiquetas deste modelo.
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-1">
           <Card className="bg-card/60 border-none shadow-2xl backdrop-blur-md">
-            <CardHeader><CardTitle>Configurações Gerais</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Configurações Gerais</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <Label className="text-muted-foreground text-xs font-bold tracking-widest uppercase">Nome do Modelo</Label>
-                <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} className="bg-muted/20" />
+                <Label className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
+                  Nome do Modelo
+                </Label>
+                <Input
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  className="bg-muted/20"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-3">
-                  <Label className="text-muted-foreground text-xs font-bold tracking-widest uppercase">Categoria</Label>
-                  <Select value={category} onChange={(e) => handleCategoryChange(e.target.value)} className="bg-muted/20">
+                  <Label className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
+                    Categoria
+                  </Label>
+                  <Select
+                    value={category}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                    className="bg-muted/20"
+                  >
                     <option value="">Selecione...</option>
-                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
                   </Select>
                 </div>
                 <div className="space-y-3">
-                  <Label className="text-muted-foreground text-xs font-bold tracking-widest uppercase">Subcategoria</Label>
-                  <Select value={subcategory} onChange={(e) => setSubcategory(e.target.value)} className="bg-muted/20" disabled={!category}>
+                  <Label className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
+                    Subcategoria
+                  </Label>
+                  <Select
+                    value={subcategory}
+                    onChange={(e) => setSubcategory(e.target.value)}
+                    className="bg-muted/20"
+                    disabled={!category}
+                  >
                     <option value="">Selecione...</option>
-                    {categories.find(c => c.id === selectedCategoryId)?.subcategories.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                    {categories
+                      .find((c) => c.id === selectedCategoryId)
+                      ?.subcategories.map((sub) => (
+                        <option key={sub} value={sub}>
+                          {sub}
+                        </option>
+                      ))}
                   </Select>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <Label className="text-muted-foreground text-xs font-bold tracking-widest uppercase">Substituir Arquivo (.docx)</Label>
-                <div onClick={() => fileInputRef.current?.click()} className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-all ${file ? "border-brand-500 bg-brand-500/5 text-brand-500" : "hover:border-brand-500/50 border-white/10"}`}>
+                <Label className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
+                  Substituir Arquivo (.docx)
+                </Label>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-all ${file ? "border-brand-500 bg-brand-500/5 text-brand-500" : "hover:border-brand-500/50 border-white/10"}`}
+                >
                   <Upload size={32} className="mx-auto mb-3 opacity-50" />
-                  <p className="text-sm font-bold">{file ? file.name : "Clique para substituir o arquivo atual"}</p>
+                  <p className="text-sm font-bold">
+                    {file
+                      ? file.name
+                      : "Clique para substituir o arquivo atual"}
+                  </p>
                 </div>
-                <input type="file" ref={fileInputRef} className="hidden" accept=".docx" onChange={handleFileChange} />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept=".docx"
+                  onChange={handleFileChange}
+                />
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleSave} disabled={fields.length === 0 || isUploading} className="shadow-brand-500/30 h-14 w-full text-lg font-black shadow-xl">
+              <Button
+                onClick={handleSave}
+                disabled={fields.length === 0 || isUploading}
+                className="shadow-brand-500/30 h-14 w-full text-lg font-black shadow-xl"
+              >
                 {isUploading ? "Salvando..." : "Salvar Alterações"}
               </Button>
             </CardFooter>
@@ -292,7 +337,9 @@ export default function EditTemplatePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Etiquetas Detectadas</CardTitle>
-                  <CardDescription>Configure como os dados serão inseridos neste modelo.</CardDescription>
+                  <CardDescription>
+                    Configure como os dados serão inseridos neste modelo.
+                  </CardDescription>
                 </div>
                 <div className="text-brand-500 bg-brand-500/10 flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold uppercase">
                   <Hash size={14} /> {fields.length} campos
@@ -301,65 +348,55 @@ export default function EditTemplatePage() {
             </CardHeader>
             <CardContent>
               {isScanning ? (
-                <div className="text-muted-foreground animate-pulse py-20 text-center">Escaneando etiquetas no Word...</div>
+                <div className="text-muted-foreground animate-pulse py-20 text-center">
+                  Escaneando etiquetas no Word...
+                </div>
               ) : (
                 <div className="space-y-4">
                   {fields.map((field, index) => (
-                    <motion.div key={field.key} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} className="bg-muted/20 flex flex-col items-start gap-4 rounded-2xl border border-white/5 p-5 md:flex-row md:items-end">
-                      <div className="flex w-full flex-col gap-4">
-                        <div className="flex w-full flex-col items-start gap-4 md:flex-row md:items-end">
-                            <div className="flex-1 space-y-2">
-                                <Label className="text-brand-500 text-[10px] font-black tracking-tighter uppercase">Chave: <span className="text-foreground">{field.key}</span></Label>
-                                <Input value={field.label} onChange={(e) => updateField(index, { label: e.target.value })} className="bg-background/40" />
-                            </div>
-                            <div className="w-full space-y-2 md:w-48">
-                                <Label className="text-muted-foreground text-[10px] font-black uppercase">Tipo</Label>
-                                <Select value={field.type} onChange={(e) => updateField(index, { type: e.target.value as any, columns: e.target.value === 'table' ? (field.columns || []) : undefined })} className="bg-background/40">
-                                <option value="text">Texto</option>
-                                <option value="image">Imagem</option>
-                                <option value="table">Tabela</option>
-                                </Select>
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => removeField(index)} className="mb-0.5 rounded-xl text-red-100 hover:bg-red-500/10"><Trash2 size={18} /></Button>
-                        </div>
-
-                        {field.type === 'table' && (
-                            <div className="bg-brand-500/5 w-full space-y-3 rounded-2xl border border-brand-500/10 p-4">
-                                <div className="flex items-center justify-between">
-                                    <Label className="text-brand-500 text-[10px] font-black uppercase">
-                                        Colunas da Tabela
-                                    </Label>
-                                    <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        onClick={() => {
-                                            const col = prompt("Nome da etiqueta no Word (ex: preco)")
-                                            if (col) updateField(index, { columns: [...(field.columns || []), col] })
-                                        }}
-                                        className="h-7 rounded-lg px-2 text-[10px]"
-                                    >
-                                        + Add Coluna
-                                    </Button>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {(field.columns || []).map((col, colIdx) => (
-                                        <div key={colIdx} className="bg-brand-500/10 text-brand-400 border-brand-500/20 flex items-center gap-2 rounded-lg border px-2 py-1 text-[10px] font-bold">
-                                            {col}
-                                            <button 
-                                                onClick={() => updateField(index, { columns: (field.columns || []).filter((_, i) => i !== colIdx) })} 
-                                                className="hover:text-red-400 transition-colors"
-                                            >
-                                                <X size={10} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    {(field.columns || []).length === 0 && (
-                                        <p className="text-muted-foreground text-[10px] italic opacity-50">Nenhuma coluna definida. Use # ou adicione manualmente.</p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
+                    <motion.div
+                      key={field.key}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="bg-muted/20 flex flex-col items-start gap-4 rounded-2xl border border-white/5 p-5 md:flex-row md:items-end"
+                    >
+                      <div className="flex-1 space-y-2">
+                        <Label className="text-brand-500 text-[10px] font-black tracking-tighter uppercase">
+                          Chave:{" "}
+                          <span className="text-foreground">{field.key}</span>
+                        </Label>
+                        <Input
+                          value={field.label}
+                          onChange={(e) =>
+                            updateField(index, { label: e.target.value })
+                          }
+                          className="bg-background/40"
+                        />
                       </div>
+                      <div className="w-full space-y-2 md:w-48">
+                        <Label className="text-muted-foreground text-[10px] font-black uppercase">
+                          Tipo
+                        </Label>
+                        <Select
+                          value={field.type}
+                          onChange={(e) =>
+                            updateField(index, { type: e.target.value as any })
+                          }
+                          className="bg-background/40"
+                        >
+                          <option value="text">Texto</option>
+                          <option value="image">Imagem</option>
+                        </Select>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeField(index)}
+                        className="mb-0.5 rounded-xl text-red-400 hover:bg-red-500/10"
+                      >
+                        <Trash2 size={18} />
+                      </Button>
                     </motion.div>
                   ))}
                 </div>

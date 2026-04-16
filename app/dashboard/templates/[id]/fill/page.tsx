@@ -26,7 +26,10 @@ import {
   DocumentTemplate,
 } from "@/features/documents/services/template.service"
 import { generatorService } from "@/features/documents/services/generator.service"
-import { documentService, GeneratedDocument } from "@/features/documents/services/document.service"
+import {
+  documentService,
+  GeneratedDocument,
+} from "@/features/documents/services/document.service"
 import { pdfService } from "@/features/documents/services/pdf.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,7 +51,7 @@ export default function FillReportPage({
   const params = use(paramsPromise)
   const searchParams = useSearchParams()
   const editDocId = searchParams.get("editDocId")
-  
+
   const { user, loading: authLoading } = useAuth()
   const [template, setTemplate] = useState<DocumentTemplate | null>(null)
   const [editingDoc, setEditingDoc] = useState<GeneratedDocument | null>(null)
@@ -58,17 +61,14 @@ export default function FillReportPage({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [isDone, setIsDone] = useState(false)
   const [authorName, setAuthorName] = useState("")
-  
-  // Storage for table columns (keys) and row data
-  // FieldKey -> string[]
-  const [tableColumns, setTableColumns] = useState<Record<string, string[]>>({})
 
   // Fetch user profile to get author name
   useEffect(() => {
     async function fetchProfile() {
       if (!user) return
       try {
-        const { userService } = await import("@/features/user/services/user.service")
+        const { userService } =
+          await import("@/features/user/services/user.service")
         const profile = await userService.getUserProfile(user.uid)
         if (profile) {
           setAuthorName(`${profile.firstName} ${profile.lastName}`)
@@ -91,43 +91,25 @@ export default function FillReportPage({
       try {
         const [tplData, docs] = await Promise.all([
           templateService.getTemplateById(params.id),
-          editDocId ? documentService.getDocuments(user.uid) : Promise.resolve([])
+          editDocId
+            ? documentService.getDocuments(user.uid)
+            : Promise.resolve([]),
         ])
 
         if (tplData) {
           setTemplate(tplData)
-          
 
-          const editData = docs.find(d => d.id === editDocId)
-          
+          const editData = docs.find((d) => d.id === editDocId)
+
           if (editData && editData.formData) {
             setEditingDoc(editData)
             setFormData(editData.formData)
-            
-            // Reconstruct table columns from existing data
-            const colsMap: Record<string, string[]> = {}
-            tplData.fields.filter(f => f.type === 'table').forEach(f => {
-               const tableData = editData.formData?.[f.key]
-               if (Array.isArray(tableData) && tableData.length > 0) {
-                 colsMap[f.key] = Object.keys(tableData[0])
-               } else if (f.columns && f.columns.length > 0) {
-                 colsMap[f.key] = f.columns
-               } else {
-                 colsMap[f.key] = ["item"] // default
-               }
-            })
-            setTableColumns(colsMap)
           } else {
             const initialData: Record<string, any> = {}
-            const colsMap: Record<string, string[]> = {}
             tplData.fields.forEach((f) => {
-              initialData[f.key] = f.type === "table" ? [] : ""
-              if (f.type === 'table') {
-                colsMap[f.key] = (f.columns && f.columns.length > 0) ? f.columns : ["item"]
-              }
+              initialData[f.key] = ""
             })
             setFormData(initialData)
-            setTableColumns(colsMap)
           }
         }
       } catch (err) {
@@ -151,64 +133,6 @@ export default function FillReportPage({
     reader.readAsDataURL(file)
   }
 
-  // Table Handlers
-  const addTableColumn = (fieldKey: string) => {
-    const colName = prompt("Digite o nome da etiqueta no Word (ex: descricao):")
-    if (!colName) return
-    setTableColumns(prev => ({
-      ...prev,
-      [fieldKey]: [...(prev[fieldKey] || []), colName]
-    }))
-    // Initialize columns in existing rows if needed
-    setFormData(prev => {
-      const rows = prev[fieldKey] as any[]
-      return {
-        ...prev,
-        [fieldKey]: rows.map(r => ({ ...r, [colName]: "" }))
-      }
-    })
-  }
-
-  const removeTableColumn = (fieldKey: string, colName: string) => {
-    setTableColumns(prev => ({
-      ...prev,
-      [fieldKey]: prev[fieldKey].filter(c => c !== colName)
-    }))
-    setFormData(prev => {
-      const rows = prev[fieldKey] as any[]
-      const newRows = rows.map(r => {
-        const { [colName]: _, ...rest } = r
-        return rest
-      })
-      return { ...prev, [fieldKey]: newRows }
-    })
-  }
-
-  const addTableRow = (fieldKey: string) => {
-    const columns = tableColumns[fieldKey] || []
-    const newRow: any = {}
-    columns.forEach(c => newRow[c] = "")
-    setFormData(prev => ({
-      ...prev,
-      [fieldKey]: [...(prev[fieldKey] || []), newRow]
-    }))
-  }
-
-  const removeTableRow = (fieldKey: string, rowIndex: number) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldKey]: (prev[fieldKey] as any[]).filter((_, i) => i !== rowIndex)
-    }))
-  }
-
-  const updateTableCell = (fieldKey: string, rowIndex: number, colName: string, value: string) => {
-    setFormData(prev => {
-      const rows = [...(prev[fieldKey] as any[])]
-      rows[rowIndex] = { ...rows[rowIndex], [colName]: value }
-      return { ...prev, [fieldKey]: rows }
-    })
-  }
-
   const processGeneration = async (mode: "docx" | "pdf") => {
     if (!template || !user) return
 
@@ -220,7 +144,7 @@ export default function FillReportPage({
         template.fileUrl
       )
       const fieldTypes: Record<string, string> = {}
-      template.fields.forEach(f => fieldTypes[f.key] = f.type)
+      template.fields.forEach((f) => (fieldTypes[f.key] = f.type))
 
       const docxBlob = await generatorService.generateDocx(
         templateBuffer,
@@ -228,7 +152,9 @@ export default function FillReportPage({
         fieldTypes
       )
 
-      const baseName = editingDoc ? editingDoc.fileName.replace(/\.(docx|pdf)$/, "") : `${template.name}_${Date.now()}`
+      const baseName = editingDoc
+        ? editingDoc.fileName.replace(/\.(docx|pdf)$/, "")
+        : `${template.name}_${Date.now()}`
       const wordName = `${baseName}.docx`
 
       let finalFileUrl = ""
@@ -236,22 +162,20 @@ export default function FillReportPage({
       let finalFileName = wordName
 
       if (mode === "docx") {
-        const { fileUrl, storagePath } = await templateService.uploadGeneratedFile(
-          docxBlob,
-          wordName,
-          user.uid
-        )
+        const { fileUrl, storagePath } =
+          await templateService.uploadGeneratedFile(
+            docxBlob,
+            wordName,
+            user.uid
+          )
         finalFileUrl = fileUrl
         finalStoragePath = storagePath
         await generatorService.downloadBlob(docxBlob, wordName)
       } else {
         const pdfBlob = await pdfService.convertDocxToPdf(docxBlob, wordName)
         const pdfName = `${baseName}.pdf`
-        const { fileUrl, storagePath } = await templateService.uploadGeneratedFile(
-          pdfBlob,
-          pdfName,
-          user.uid
-        )
+        const { fileUrl, storagePath } =
+          await templateService.uploadGeneratedFile(pdfBlob, pdfName, user.uid)
         finalFileUrl = fileUrl
         finalStoragePath = storagePath
         finalFileName = pdfName
@@ -268,7 +192,8 @@ export default function FillReportPage({
         category: template.category,
         subcategory: template.subcategory,
         authorId: user.uid,
-        authorName: authorName || user.displayName || user.email || "Autor Desconhecido",
+        authorName:
+          authorName || user.displayName || user.email || "Autor Desconhecido",
         formData: formData,
       }
 
@@ -336,108 +261,25 @@ export default function FillReportPage({
         <CardContent className="space-y-12 p-12 pt-0">
           <div className="grid grid-cols-1 gap-x-12 gap-y-10">
             {template.fields.map((field) => (
-              <div key={field.key} className={`space-y-4 ${field.type === 'table' ? 'col-span-full' : 'md:col-span-1'}`}>
+              <div key={field.key} className="space-y-4 md:col-span-1">
                 <Label className="text-muted-foreground ml-1 flex items-center gap-2 text-xs font-black tracking-widest uppercase">
                   {field.label}{" "}
                   {field.type === "image" && (
                     <ImageIcon size={16} className="text-brand-500" />
                   )}
-                  {field.type === "table" && (
-                    <TableIcon size={16} className="text-brand-500" />
-                  )}
                 </Label>
 
                 {field.type === "text" && (
-                   <div className="md:grid">
+                  <div className="md:grid">
                     <Input
-                        value={formData[field.key]}
-                        onChange={(e) =>
+                      value={formData[field.key]}
+                      onChange={(e) =>
                         handleInputChange(field.key, e.target.value)
-                        }
-                        placeholder={`Ex: Informe o ${field.label.toLowerCase()}`}
-                        className="bg-muted/30 focus-visible:ring-brand-500/30 h-14 rounded-2xl border-none text-lg font-medium"
+                      }
+                      placeholder={`Ex: Informe o ${field.label.toLowerCase()}`}
+                      className="bg-muted/30 focus-visible:ring-brand-500/30 h-14 rounded-2xl border-none text-lg font-medium"
                     />
-                   </div>
-                )}
-
-                {field.type === "table" && (
-                   <div className="bg-muted/10 space-y-4 rounded-3xl border border-white/5 p-6 shadow-inner">
-                      <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex flex-wrap gap-2">
-                          {(tableColumns[field.key] || []).map(col => (
-                            <div key={col} className="bg-brand-500/10 text-brand-400 border-brand-500/20 flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase">
-                              {col}
-                              <button onClick={() => removeTableColumn(field.key, col)} className="hover:text-red-400">
-                                <X size={12} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                           <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => addTableColumn(field.key)}
-                            className="border-brand-500/20 text-brand-400 hover:bg-brand-500 rounded-xl text-[10px] font-black uppercase hover:text-white"
-                           >
-                             <Columns className="mr-1.5" size={14} /> Add Coluna
-                           </Button>
-                           <Button 
-                            size="sm" 
-                            onClick={() => addTableRow(field.key)}
-                            className="rounded-xl text-[10px] font-black uppercase"
-                           >
-                             <PlusCircle className="mr-1.5" size={14} /> Add Linha
-                           </Button>
-                        </div>
-                      </div>
-
-                      <div className="overflow-x-auto rounded-2xl">
-                        <table className="w-full border-separate border-spacing-2">
-                          <thead>
-                            <tr>
-                              {(tableColumns[field.key] || []).map(col => (
-                                <th key={col} className="text-muted-foreground text-left text-[10px] font-black uppercase tracking-widest px-2">
-                                  {col}
-                                </th>
-                              ))}
-                              <th className="w-10"></th>
-                            </tr>
-                          </thead>
-                          <tbody className="space-y-2">
-                            {(formData[field.key] as any[] || []).map((row, rowIndex) => (
-                              <tr key={rowIndex} className="group">
-                                {(tableColumns[field.key] || []).map(col => (
-                                  <td key={col}>
-                                    <Input 
-                                      value={row[col] || ""}
-                                      onChange={(e) => updateTableCell(field.key, rowIndex, col, e.target.value)}
-                                      className="bg-white/5 border-none h-10 rounded-xl text-sm"
-                                      placeholder="..."
-                                    />
-                                  </td>
-                                ))}
-                                <td>
-                                   <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    onClick={() => removeTableRow(field.key, rowIndex)}
-                                    className="h-10 w-10 text-red-400/50 hover:bg-red-500/10 hover:text-red-400"
-                                   >
-                                     <Trash2 size={16} />
-                                   </Button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      {(formData[field.key] as any[] || []).length === 0 && (
-                        <div className="text-muted-foreground py-8 text-center text-sm font-medium italic opacity-40">
-                          Nenhuma linha adicionada. Comece adicionando colunas (etiquetas do Word) e depois linhas.
-                        </div>
-                      )}
-                   </div>
+                  </div>
                 )}
 
                 {field.type === "image" && (
@@ -466,13 +308,16 @@ export default function FillReportPage({
                         }}
                       />
                     </div>
-                    
+
                     <div className="bg-brand-500/5 border-brand-500/10 rounded-xl border p-3">
-                      <p className="text-brand-400 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                      <p className="text-brand-400 flex items-center gap-2 text-[10px] font-black tracking-widest uppercase">
                         <Sparkles size={12} /> Inteligência Automática
                       </p>
                       <p className="text-muted-foreground mt-1 text-xs font-medium">
-                        Campo configurado como <span className="text-brand-500 font-bold">Imagem</span>. O sistema converterá as etiquetas no Word automaticamente durante a geração.
+                        Campo configurado como{" "}
+                        <span className="text-brand-500 font-bold">Imagem</span>
+                        . O sistema converterá as etiquetas no Word
+                        automaticamente durante a geração.
                       </p>
                     </div>
 
