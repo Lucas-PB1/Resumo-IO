@@ -12,7 +12,18 @@ import {
   doc,
 } from "firebase/firestore"
 import { storage } from "@/lib/firebase/storage"
-import { ref, deleteObject } from "firebase/storage"
+import {
+  ref,
+  deleteObject,
+  uploadBytes,
+  getDownloadURL,
+} from "firebase/storage"
+
+export interface Evidence {
+  fileName: string
+  fileUrl: string
+  storagePath: string
+}
 
 export interface GeneratedDocument {
   id?: string
@@ -26,8 +37,9 @@ export interface GeneratedDocument {
   subcategory?: string
   authorId?: string
   authorName?: string
-  formData?: Record<string, any>
-  createdAt: any
+  formData?: Record<string, string | number | boolean | null>
+  evidence?: Evidence[]
+  createdAt: Timestamp
 }
 
 const DOCUMENTS_COLLECTION = "generated_docs"
@@ -43,6 +55,25 @@ export const documentService = {
     return docRef.id
   },
 
+  async uploadEvidence(files: File[], userId: string) {
+    const evidence: Evidence[] = []
+
+    for (const file of files) {
+      const storagePath = `evidence/${userId}/${Date.now()}_${file.name}`
+      const storageRef = ref(storage, storagePath)
+      await uploadBytes(storageRef, file)
+      const fileUrl = await getDownloadURL(storageRef)
+
+      evidence.push({
+        fileName: file.name,
+        fileUrl,
+        storagePath,
+      })
+    }
+
+    return evidence
+  },
+
   async getDocuments(userId: string) {
     const q = query(
       collection(db, DOCUMENTS_COLLECTION),
@@ -56,7 +87,7 @@ export const documentService = {
     })) as GeneratedDocument[]
   },
 
-  async deleteDocument(id: string, storagePath: string) {
+  async deleteDocument(id: string, storagePath: string, evidence?: Evidence[]) {
     // Delete from Firestore first
     await deleteDoc(doc(db, DOCUMENTS_COLLECTION, id))
 
@@ -70,6 +101,18 @@ export const documentService = {
           "Could not delete physical file from Storage, it might have been moved or already deleted.",
           err
         )
+      }
+    }
+
+    // Delete associated evidence files from Storage
+    if (evidence && evidence.length > 0) {
+      for (const item of evidence) {
+        try {
+          const evidenceRef = ref(storage, item.storagePath)
+          await deleteObject(evidenceRef)
+        } catch (err) {
+          console.warn(`Could not delete evidence file: ${item.fileName}`, err)
+        }
       }
     }
   },

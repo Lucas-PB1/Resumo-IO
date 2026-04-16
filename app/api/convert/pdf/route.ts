@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import mammoth from "mammoth"
 import puppeteer from "puppeteer-core"
 import chromium from "@sparticuz/chromium-min"
+import fs from "fs"
 
 export const maxDuration = 60 // Allow more time for PDF generation
 
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     let executablePath = ""
     try {
       executablePath = await chromium.executablePath()
-    } catch (e) {
+    } catch {
       console.warn("Chromium executable path not found via sparticuz.")
     }
 
@@ -54,7 +55,6 @@ export async function POST(req: NextRequest) {
         // MacOS
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
       ]
-      const fs = require("fs")
       executablePath = commonPaths.find((p) => fs.existsSync(p)) || ""
     }
 
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const browser = await puppeteer.launch({
       args: chromium.args,
       executablePath: executablePath,
-      headless: "new" as any,
+      headless: true,
     })
 
     const page = await browser.newPage()
@@ -115,18 +115,20 @@ export async function POST(req: NextRequest) {
 
     await browser.close()
 
-    return new NextResponse(Buffer.from(pdfBuffer) as any, {
+    return new NextResponse(Buffer.from(pdfBuffer), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${file.name.replace(".docx", ".pdf")}"`,
       },
     })
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Erro desconhecido"
     console.error("PDF Conversion Error:", error)
     return NextResponse.json(
       {
         message: "Erro na conversão para PDF",
-        error: error.message,
+        error: errorMessage,
       },
       { status: 500 }
     )

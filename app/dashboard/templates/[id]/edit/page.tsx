@@ -4,11 +4,10 @@ import React, { useState, useRef, useEffect } from "react"
 import {
   ArrowLeft,
   Upload,
-  Save,
   Trash2,
   Hash,
-  Sparkles,
-  X,
+  Type,
+  Image as LucideImage,
 } from "lucide-react"
 import { motion } from "motion/react"
 import Link from "next/link"
@@ -52,8 +51,6 @@ export default function EditTemplatePage() {
   const [isUploading, setIsUploading] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [dataLoading, setDataLoading] = useState(true)
-  const [originalTemplate, setOriginalTemplate] =
-    useState<DocumentTemplate | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -70,7 +67,6 @@ export default function EditTemplatePage() {
         ])
 
         if (template) {
-          setOriginalTemplate(template)
           setTemplateName(template.name)
           setFields(template.fields)
           setCategory(template.category || "")
@@ -171,7 +167,7 @@ export default function EditTemplatePage() {
     if (!user || !id || !templateName) return
     setIsUploading(true)
     try {
-      let updates: Partial<DocumentTemplate> = {
+      const updates: Partial<DocumentTemplate> = {
         name: templateName,
         fields,
         category,
@@ -359,44 +355,62 @@ export default function EditTemplatePage() {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="bg-muted/20 flex flex-col items-start gap-4 rounded-2xl border border-white/5 p-5 md:flex-row md:items-end"
+                      className="bg-muted/10 group hover:bg-muted/20 relative flex flex-col gap-4 rounded-3xl border border-white/5 p-6 transition-all sm:p-5"
                     >
-                      <div className="flex-1 space-y-2">
-                        <Label className="text-brand-500 text-[10px] font-black tracking-tighter uppercase">
-                          Chave:{" "}
-                          <span className="text-foreground">{field.key}</span>
-                        </Label>
-                        <Input
-                          value={field.label}
-                          onChange={(e) =>
-                            updateField(index, { label: e.target.value })
-                          }
-                          className="bg-background/40"
-                        />
-                      </div>
-                      <div className="w-full space-y-2 md:w-48">
-                        <Label className="text-muted-foreground text-[10px] font-black uppercase">
-                          Tipo
-                        </Label>
-                        <Select
-                          value={field.type}
-                          onChange={(e) =>
-                            updateField(index, { type: e.target.value as any })
-                          }
-                          className="bg-background/40"
-                        >
-                          <option value="text">Texto</option>
-                          <option value="image">Imagem</option>
-                        </Select>
-                      </div>
+                      {/* Delete Button - Top Right */}
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => removeField(index)}
-                        className="mb-0.5 rounded-xl text-red-400 hover:bg-red-500/10"
+                        className="absolute top-4 right-4 h-9 w-9 rounded-full bg-red-500/5 text-red-400 transition-opacity hover:bg-red-500 hover:text-white sm:h-8 sm:w-8 sm:opacity-0 sm:group-hover:opacity-100"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </Button>
+
+                      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-4">
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Hash size={14} className="text-brand-500" />
+                            <Label className="text-muted-foreground text-[10px] font-black tracking-widest uppercase">
+                              Chave:{" "}
+                              <span className="text-foreground">
+                                {field.key}
+                              </span>
+                            </Label>
+                          </div>
+                          <Input
+                            value={field.label}
+                            onChange={(e) =>
+                              updateField(index, { label: e.target.value })
+                            }
+                            placeholder="Nome no formulário"
+                            className="bg-background/40 h-12 rounded-xl border-none font-bold placeholder:font-medium placeholder:opacity-30"
+                          />
+                        </div>
+
+                        <div className="w-full space-y-3 sm:w-56">
+                          <Label className="text-muted-foreground flex items-center gap-2 text-[10px] font-black tracking-widest uppercase">
+                            {field.type === "text" ? (
+                              <Type size={14} />
+                            ) : (
+                              <LucideImage size={14} />
+                            )}
+                            Tipo do Campo
+                          </Label>
+                          <Select
+                            value={field.type}
+                            onChange={(e) =>
+                              updateField(index, {
+                                type: e.target.value as "text" | "image",
+                              })
+                            }
+                            className="bg-background/40 h-12 rounded-xl border-none font-bold"
+                          >
+                            <option value="text">Texto Simples</option>
+                            <option value="image">Imagem / Foto</option>
+                          </Select>
+                        </div>
+                      </div>
                     </motion.div>
                   ))}
                 </div>

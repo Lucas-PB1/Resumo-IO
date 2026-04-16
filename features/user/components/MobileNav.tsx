@@ -4,7 +4,7 @@ import React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion } from "motion/react"
-import { Layout, Sparkles, Files, User } from "lucide-react"
+import { Layout, Sparkles, Files } from "lucide-react"
 
 export function MobileNav() {
   const pathname = usePathname()

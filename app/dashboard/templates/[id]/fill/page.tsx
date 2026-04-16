@@ -9,14 +9,15 @@ import {
   CheckCircle2,
   FileType,
   Plus,
-  Trash2,
   X,
-  PlusCircle,
   Sparkles,
+  Paperclip,
+  HardDrive,
+  FileText,
 } from "lucide-react"
 import { motion } from "motion/react"
 import Link from "next/link"
-import { useRouter, useParams, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import {
   templateService,
@@ -26,6 +27,7 @@ import { generatorService } from "@/features/documents/services/generator.servic
 import {
   documentService,
   GeneratedDocument,
+  Evidence,
 } from "@/features/documents/services/document.service"
 import { pdfService } from "@/features/documents/services/pdf.service"
 import { Button } from "@/components/ui/button"
@@ -52,12 +54,16 @@ export default function FillReportPage({
   const { user, loading: authLoading } = useAuth()
   const [template, setTemplate] = useState<DocumentTemplate | null>(null)
   const [editingDoc, setEditingDoc] = useState<GeneratedDocument | null>(null)
-  const [formData, setFormData] = useState<Record<string, any>>({})
+  const [formData, setFormData] = useState<
+    Record<string, string | number | boolean | null>
+  >({})
   const [dataLoading, setDataLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [isDone, setIsDone] = useState(false)
   const [authorName, setAuthorName] = useState("")
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([])
+  const [showTips, setShowTips] = useState(true)
 
   // Fetch user profile to get author name
   useEffect(() => {
@@ -102,7 +108,10 @@ export default function FillReportPage({
             setEditingDoc(editData)
             setFormData(editData.formData)
           } else {
-            const initialData: Record<string, any> = {}
+            const initialData: Record<
+              string,
+              string | number | boolean | null
+            > = {}
             tplData.fields.forEach((f) => {
               initialData[f.key] = ""
             })
@@ -179,6 +188,15 @@ export default function FillReportPage({
         await generatorService.downloadBlob(pdfBlob, pdfName)
       }
 
+      // Upload evidence if any
+      let uploadedEvidence: Evidence[] = []
+      if (evidenceFiles.length > 0) {
+        uploadedEvidence = await documentService.uploadEvidence(
+          evidenceFiles,
+          user.uid
+        )
+      }
+
       const docPayload = {
         templateId: template.id!,
         templateName: template.name,
@@ -192,6 +210,7 @@ export default function FillReportPage({
         authorName:
           authorName || user.displayName || user.email || "Autor Desconhecido",
         formData: formData,
+        evidence: uploadedEvidence,
       }
 
       if (editingDoc) {
@@ -269,7 +288,12 @@ export default function FillReportPage({
                 {field.type === "text" && (
                   <div className="md:grid">
                     <Input
-                      value={formData[field.key]}
+                      value={
+                        typeof formData[field.key] === "string" ||
+                        typeof formData[field.key] === "number"
+                          ? (formData[field.key] as string | number)
+                          : ""
+                      }
                       onChange={(e) =>
                         handleInputChange(field.key, e.target.value)
                       }
@@ -326,7 +350,11 @@ export default function FillReportPage({
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={formData[field.key]}
+                          src={
+                            typeof formData[field.key] === "string"
+                              ? (formData[field.key] as string)
+                              : ""
+                          }
                           alt="Preview"
                           className="h-full w-full object-cover"
                         />
@@ -336,6 +364,87 @@ export default function FillReportPage({
                 )}
               </div>
             ))}
+          </div>
+
+          {/* Evidence Section */}
+          <div className="border-t border-white/5 pt-12">
+            <div className="mb-6 flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="text-brand-400 flex items-center gap-2 text-xs font-black tracking-widest uppercase">
+                  <Paperclip size={14} /> Evidências (Anexos)
+                </Label>
+                <p className="text-muted-foreground text-sm font-medium">
+                  Anexe arquivos que serviram de base para este relatório (PDFs,
+                  Imagens, Documentos).
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  document.getElementById("evidence-upload")?.click()
+                }
+                className="border-brand-500/20 text-brand-400 h-10 gap-2 rounded-xl"
+              >
+                <Plus size={16} /> Adicionar Arquivo
+              </Button>
+              <input
+                id="evidence-upload"
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || [])
+                  setEvidenceFiles((prev) => [...prev, ...files])
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {evidenceFiles.map((file, i) => (
+                <motion.div
+                  key={`${file.name}-${i}`}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-brand-500/5 group hover:bg-brand-500/10 flex items-center justify-between rounded-2xl border border-white/5 p-4 transition-all"
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="bg-brand-500/20 text-brand-500 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                      <FileText size={18} />
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="text-foreground truncate text-sm font-bold">
+                        {file.name}
+                      </p>
+                      <p className="text-muted-foreground text-[10px] font-medium uppercase">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() =>
+                      setEvidenceFiles((prev) =>
+                        prev.filter((_, idx) => idx !== i)
+                      )
+                    }
+                    className="h-8 w-8 rounded-lg text-red-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/10"
+                  >
+                    <X size={16} />
+                  </Button>
+                </motion.div>
+              ))}
+              {evidenceFiles.length === 0 && (
+                <div className="bg-muted/10 col-span-full flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/5 py-10 opacity-50">
+                  <HardDrive size={32} className="mb-2" />
+                  <p className="text-sm font-medium italic">
+                    Nenhum anexo de evidência adicionado.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
         <CardFooter className="bg-muted/20 flex flex-col gap-8 p-12 pt-6 sm:flex-row">
@@ -376,20 +485,34 @@ export default function FillReportPage({
         </CardFooter>
       </Card>
 
-      <div className="bg-brand-500/5 border-brand-500/10 flex items-start gap-4 rounded-[2.5rem] border p-8">
-        <div className="bg-brand-500/20 text-brand-500 rounded-2xl p-3">
-          <CheckCircle2 size={24} />
-        </div>
-        <div className="space-y-1">
-          <h4 className="text-foreground text-lg font-bold">
-            Dica de Exportação
-          </h4>
-          <p className="text-muted-foreground font-medium">
-            Os arquivos gerados são salvos automaticamente no seu histórico de
-            **Documentos**. Você pode acessá-los a qualquer momento.
-          </p>
-        </div>
-      </div>
+      {showTips && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-brand-500/5 border-brand-500/10 relative flex items-start gap-4 rounded-[2.5rem] border p-8"
+        >
+          <div className="bg-brand-500/20 text-brand-500 shrink-0 rounded-2xl p-3">
+            <CheckCircle2 size={24} />
+          </div>
+          <div className="space-y-1 pr-8">
+            <h4 className="text-foreground text-lg font-bold">
+              Dica de Exportação
+            </h4>
+            <p className="text-muted-foreground font-medium">
+              Os arquivos gerados são salvos automaticamente no seu histórico de
+              **Documentos**. Você pode acessá-los a qualquer momento.
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowTips(false)}
+            className="absolute top-4 right-4 h-8 w-8 rounded-full hover:bg-white/5"
+          >
+            <X size={16} />
+          </Button>
+        </motion.div>
+      )}
     </div>
   )
 }

@@ -40,8 +40,10 @@ export const RegisterForm = () => {
       setErrorStatus("")
       await authService.register(data)
       router.push("/dashboard")
-    } catch (err: any) {
-      setErrorStatus(err.message || "Erro ao realizar cadastro.")
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro ao realizar cadastro."
+      setErrorStatus(errorMessage)
     }
   }
 
@@ -160,7 +162,7 @@ export const RegisterForm = () => {
               try {
                 await authService.loginWithGoogle()
                 router.push("/dashboard")
-              } catch (err: any) {
+              } catch {
                 setErrorStatus("Falha no cadastro com Google")
               }
             }}

@@ -1,6 +1,6 @@
 import PizZip from "pizzip"
 import Docxtemplater from "docxtemplater"
-// @ts-ignore
+// @ts-expect-error - No types for docxtemplater-image-module-free
 import ImageModule from "docxtemplater-image-module-free"
 import { saveAs } from "file-saver"
 
@@ -51,7 +51,7 @@ export const generatorService = {
 
   async generateDocx(
     templateBuffer: ArrayBuffer,
-    data: Record<string, any>,
+    data: Record<string, string | number | boolean | null>,
     fieldTypes: Record<string, string> = {}
   ) {
     const zip = new PizZip(templateBuffer)
@@ -62,7 +62,7 @@ export const generatorService = {
     // Config for Image Module
     const imageOptions = {
       centered: false,
-      getImage(tagValue: any) {
+      getImage(tagValue: string | Buffer | null) {
         if (!tagValue) return null
         if (typeof tagValue === "string" && tagValue.includes("base64,")) {
           return Buffer.from(tagValue.split(",")[1], "base64")
@@ -84,7 +84,7 @@ export const generatorService = {
 
     try {
       doc.render(data)
-    } catch (error: any) {
+    } catch (error) {
       console.error("Docxtemplater Error:", error)
       throw error
     }

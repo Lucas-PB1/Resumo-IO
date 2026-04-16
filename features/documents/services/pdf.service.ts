@@ -13,7 +13,7 @@ export const pdfService = {
       try {
         const error = await response.json()
         errorMessage = error.message || errorMessage
-      } catch (e) {
+      } catch {
         // Response was not JSON (e.g. server crash)
         errorMessage = `Erro do Servidor (${response.status}): O processo de conversão falhou.`
       }

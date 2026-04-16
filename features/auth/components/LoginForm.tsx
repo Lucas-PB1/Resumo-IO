@@ -39,8 +39,10 @@ export const LoginForm = () => {
       setErrorStatus("")
       await authService.login(data)
       router.push("/dashboard")
-    } catch (err: any) {
-      setErrorStatus(err.message || "Credenciais inválidas")
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Credenciais inválidas"
+      setErrorStatus(errorMessage)
     }
   }
 
@@ -121,7 +123,7 @@ export const LoginForm = () => {
               try {
                 await authService.loginWithGoogle()
                 router.push("/dashboard")
-              } catch (err: any) {
+              } catch {
                 setErrorStatus("Falha no login com Google")
               }
             }}

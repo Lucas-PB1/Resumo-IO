@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Plus, Trash2, Tag, FolderTree, X, Check } from "lucide-react"
+import { Plus, Trash2, Tag, FolderTree, X } from "lucide-react"
 import { motion, AnimatePresence } from "motion/react"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import {
@@ -17,7 +17,6 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 
 export default function CategoriesClient() {
   const { user } = useAuth()

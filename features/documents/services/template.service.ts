@@ -36,7 +36,7 @@ export interface DocumentTemplate {
   subcategory?: string
   authorId?: string
   authorName?: string
-  createdAt: any
+  createdAt: Timestamp
 }
 
 const TEMPLATES_COLLECTION = "doc_templates"

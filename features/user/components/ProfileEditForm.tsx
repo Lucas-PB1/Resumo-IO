@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react"
 import { useForm } from "react-hook-form"
-import { User, Upload, ShieldCheck } from "lucide-react"
+import { User, Upload } from "lucide-react"
 import { motion } from "motion/react"
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 
@@ -15,14 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 
 export const ProfileEditForm = () => {
   const { user } = useAuth()
@@ -45,7 +38,7 @@ export const ProfileEditForm = () => {
     reset,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
   } = useForm<Partial<UserProfileData>>()
   const currentPhotoURL = watch("photoURL")
 
@@ -109,7 +102,7 @@ export const ProfileEditForm = () => {
         photoURL: data.photoURL,
       })
       setSuccessStatus("Perfil atualizado com sucesso!")
-    } catch (err: any) {
+    } catch {
       setErrorStatus("Erro ao atualizar o perfil")
     }
   }
@@ -131,9 +124,10 @@ export const ProfileEditForm = () => {
       await authService.changePassword(passwordState.new)
       setPasswordSuccess("Senha alterada com sucesso!")
       setPasswordState({ new: "", confirm: "" })
-    } catch (err: any) {
+    } catch (err) {
       console.error(err)
-      if (err.code === "auth/requires-recent-login") {
+      const error = err as { code?: string }
+      if (error.code === "auth/requires-recent-login") {
         setPasswordError(
           "Para sua segurança, saia e entre novamente antes de trocar a senha."
         )

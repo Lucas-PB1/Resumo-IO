@@ -38,8 +38,10 @@ export const ForgotPasswordForm = () => {
       setErrorStatus("")
       await authService.resetPassword(data)
       setSuccess(true)
-    } catch (err: any) {
-      setErrorStatus(err.message || "Erro ao tentar redefinir senha.")
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro ao tentar redefinir senha."
+      setErrorStatus(errorMessage)
     }
   }
 

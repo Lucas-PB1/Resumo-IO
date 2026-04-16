@@ -21,7 +21,9 @@ export async function GET(req: NextRequest) {
         "Cache-Control": "public, max-age=3600",
       },
     })
-  } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 500 })
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Erro desconhecido"
+    return NextResponse.json({ message: errorMessage }, { status: 500 })
   }
 }

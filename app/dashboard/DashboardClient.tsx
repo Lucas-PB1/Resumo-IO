@@ -43,6 +43,16 @@ import {
   CardDescription,
 } from "@/components/ui/card"
 
+interface TimelineData {
+  name: string
+  total: number
+}
+
+interface CategoryData {
+  name: string
+  value: number
+}
+
 export default function DashboardClient() {
   const { user } = useAuth()
   const router = useRouter()
@@ -52,8 +62,8 @@ export default function DashboardClient() {
     documents: 0,
     categories: 0,
   })
-  const [timelineData, setTimelineData] = useState<any[]>([])
-  const [categoryData, setCategoryData] = useState<any[]>([])
+  const [timelineData, setTimelineData] = useState<TimelineData[]>([])
+  const [categoryData, setCategoryData] = useState<CategoryData[]>([])
   const [recentDocs, setRecentDocs] = useState<GeneratedDocument[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -85,14 +95,17 @@ export default function DashboardClient() {
           })
         }).reverse()
 
-        const timelineMap = documents.reduce((acc: any, doc) => {
-          const date = new Date(doc.createdAt.toDate()).toLocaleDateString(
-            "pt-BR",
-            { day: "2-digit", month: "2-digit" }
-          )
-          acc[date] = (acc[date] || 0) + 1
-          return acc
-        }, {})
+        const timelineMap = documents.reduce(
+          (acc: Record<string, number>, doc) => {
+            const date = new Date(doc.createdAt.toDate()).toLocaleDateString(
+              "pt-BR",
+              { day: "2-digit", month: "2-digit" }
+            )
+            acc[date] = (acc[date] || 0) + 1
+            return acc
+          },
+          {}
+        )
 
         setTimelineData(
           last7Days.map((date) => ({
@@ -102,7 +115,7 @@ export default function DashboardClient() {
         )
 
         // Process Categories (Top 5)
-        const catMap = documents.reduce((acc: any, doc) => {
+        const catMap = documents.reduce((acc: Record<string, number>, doc) => {
           const cat = doc.category || "Sem Categoria"
           acc[cat] = (acc[cat] || 0) + 1
           return acc
@@ -114,7 +127,7 @@ export default function DashboardClient() {
               name,
               value,
             }))
-            .sort((a: any, b: any) => b.value - a.value)
+            .sort((a, b) => b.value - a.value)
             .slice(0, 5)
         )
       } catch (err) {
