@@ -12,8 +12,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@sparticuz/chromium-min": "^147.0.0",
-    "@types/recharts": "^2.0.1",
+    "@sparticuz/chromium": "^147.0.0",
     "clsx": "^2.1.1",
     "docxtemplater": "^3.68.5",
     "docxtemplater-image-module-free": "^1.1.1",

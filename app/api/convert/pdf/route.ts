@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import mammoth from "mammoth"
 import puppeteer from "puppeteer-core"
-import chromium from "@sparticuz/chromium-min"
+import chromium from "@sparticuz/chromium"
 import fs from "fs"
 
 export const maxDuration = 60 // Allow more time for PDF generation
@@ -34,24 +34,23 @@ export async function POST(req: NextRequest) {
 
     console.log("PDF Conversion: Launching browser...")
     let executablePath = ""
-    try {
-      executablePath = await chromium.executablePath()
-    } catch {
-      console.warn("Chromium executable path not found via sparticuz.")
-    }
+    const isVercel = !!process.env.VERCEL
 
-    // Se estivermos em ambiente de desenvolvimento ou ambiente Linux local, tentamos caminhos comuns
-    if (!executablePath && process.env.NODE_ENV === "development") {
+    if (isVercel) {
+      executablePath = await chromium.executablePath()
+    } else {
+      // Local development
       const commonPaths = [
-        // Windows
-        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
         // Linux
         "/usr/bin/google-chrome",
         "/usr/bin/google-chrome-stable",
         "/usr/bin/chromium",
         "/usr/bin/chromium-browser",
+        "/snap/bin/chromium",
+        // Windows
+        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
         // MacOS
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
       ]
@@ -60,14 +59,15 @@ export async function POST(req: NextRequest) {
 
     if (!executablePath) {
       throw new Error(
-        "Não foi possível encontrar um navegador para a conversão PDF. Verifique os logs do servidor."
+        `Não foi possível encontrar um navegador para a conversão PDF (Ambiente: ${isVercel ? "Vercel" : "Local"}).`
       )
     }
 
     const browser = await puppeteer.launch({
-      args: chromium.args,
+      args: isVercel ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
       executablePath: executablePath,
-      headless: true,
+      headless: isVercel ? "shell" : true,
+      defaultViewport: { width: 1080, height: 1920 },
     })
 
     const page = await browser.newPage()
