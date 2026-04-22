@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     // Dynamic imports can help with dependency tracing on Vercel for native modules
     const puppeteer = await import("puppeteer-core")
-    const chromium = (await import("@sparticuz/chromium")).default
+    const chromium = (await import("@sparticuz/chromium-min")).default
 
     const formData = await req.formData()
     const file = formData.get("file") as File
@@ -39,9 +39,12 @@ export async function POST(req: NextRequest) {
     const isVercel = !!process.env.VERCEL || process.env.NODE_ENV === "production"
 
     if (isVercel) {
-      console.log("PDF Conversion: Vercel environment detected. Getting chromium path...")
+      console.log("PDF Conversion: Vercel environment detected. Getting remote chromium path...")
       try {
-        executablePath = await chromium.executablePath()
+        // Using a remote binary pack to avoid path issues on Vercel
+        executablePath = await chromium.executablePath(
+          "https://github.com/Sparticuz/chromium/releases/download/v147.0.2/chromium-v147.0.2-pack.x64.tar"
+        )
       } catch (pathError) {
         console.error("PDF Conversion: Error getting chromium executable path:", pathError)
         throw pathError
