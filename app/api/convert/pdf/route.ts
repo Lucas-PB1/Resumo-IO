@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import mammoth from "mammoth"
-import puppeteer from "puppeteer-core"
-import chromium from "@sparticuz/chromium"
 import fs from "fs"
 
 export const maxDuration = 60 // Allow more time for PDF generation
 
 export async function POST(req: NextRequest) {
   try {
+    // Dynamic imports can help with dependency tracing on Vercel for native modules
+    const puppeteer = await import("puppeteer-core")
+    const chromium = (await import("@sparticuz/chromium")).default
+
     const formData = await req.formData()
     const file = formData.get("file") as File
 
@@ -34,11 +36,18 @@ export async function POST(req: NextRequest) {
 
     console.log("PDF Conversion: Launching browser...")
     let executablePath = ""
-    const isVercel = !!process.env.VERCEL
+    const isVercel = !!process.env.VERCEL || process.env.NODE_ENV === "production"
 
     if (isVercel) {
-      executablePath = await chromium.executablePath()
+      console.log("PDF Conversion: Vercel environment detected. Getting chromium path...")
+      try {
+        executablePath = await chromium.executablePath()
+      } catch (pathError) {
+        console.error("PDF Conversion: Error getting chromium executable path:", pathError)
+        throw pathError
+      }
     } else {
+      console.log("PDF Conversion: Local environment detected.")
       // Local development
       const commonPaths = [
         // Linux
@@ -63,6 +72,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    console.log(`PDF Conversion: Launching puppeteer with path: ${executablePath}`)
     const browser = await puppeteer.launch({
       args: isVercel ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
       executablePath: executablePath,
