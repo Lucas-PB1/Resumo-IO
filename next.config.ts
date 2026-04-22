@@ -1,6 +1,5 @@
-import NextConfig from "next"
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   output: "standalone",
   serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium-min"],
 }
