@@ -1,19 +1,6 @@
 import type { Metadata, Viewport } from "next"
-import { Outfit, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/features/auth/hooks/useAuth"
-
-const outfit = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
-  display: "swap",
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  display: "swap",
-})
 
 export const viewport: Viewport = {
   themeColor: "#7a8fa1",
@@ -70,10 +57,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html
-      lang="pt-BR"
-      className={`${outfit.variable} ${jetbrainsMono.variable} h-full antialiased`}
-    >
+    <html lang="pt-BR" className="h-full antialiased">
       <body className="bg-background text-foreground flex min-h-full flex-col font-sans">
         <AuthProvider>{children}</AuthProvider>
       </body>

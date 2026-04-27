@@ -3,15 +3,18 @@
 import React, { useEffect, useState, use } from "react"
 import {
   ArrowLeft,
+  AlignLeft,
   FileDown,
   Loader2,
   Image as ImageIcon,
   CheckCircle2,
+  CalendarDays,
   FileType,
   Plus,
   X,
   Sparkles,
   Paperclip,
+  Phone,
   HardDrive,
   FileText,
 } from "lucide-react"
@@ -19,20 +22,21 @@ import { motion } from "motion/react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/features/auth/hooks/useAuth"
-import {
-  templateService,
-  DocumentTemplate,
-} from "@/features/documents/services/template.service"
+import { templateService } from "@/features/documents/services/template.service"
+import type { DocumentTemplate } from "@/features/documents/services/template.service"
 import { generatorService } from "@/features/documents/services/generator.service"
-import {
-  documentService,
-  GeneratedDocument,
+import { documentService } from "@/features/documents/services/document.service"
+import type {
   Evidence,
+  GeneratedDocument,
 } from "@/features/documents/services/document.service"
 import { pdfService } from "@/features/documents/services/pdf.service"
+import { fileService } from "@/features/documents/services/file.service"
+import { fieldFormatService } from "@/features/documents/services/field-format.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Card,
   CardContent,
@@ -41,6 +45,7 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 export default function FillReportPage({
   params: paramsPromise,
@@ -132,6 +137,12 @@ export default function FillReportPage({
   }
 
   const handleImageChange = async (key: string, file: File) => {
+    const validation = fileService.validateImageFile(file)
+    if (!validation.ok) {
+      alert(validation.message)
+      return
+    }
+
     const reader = new FileReader()
     reader.onloadend = () => {
       setFormData((prev) => ({ ...prev, [key]: reader.result as string }))
@@ -154,13 +165,15 @@ export default function FillReportPage({
 
       const docxBlob = await generatorService.generateDocx(
         templateBuffer,
-        formData,
+        fieldFormatService.prepareTemplateData(formData, template.fields),
         fieldTypes
       )
 
       const baseName = editingDoc
-        ? editingDoc.fileName.replace(/\.(docx|pdf)$/, "")
-        : `${template.name}_${Date.now()}`
+        ? fileService.sanitizeFileName(
+            editingDoc.fileName.replace(/\.(docx|pdf)$/, "")
+          )
+        : fileService.sanitizeFileName(`${template.name}_${Date.now()}`)
       const wordName = `${baseName}.docx`
 
       let finalFileUrl = ""
@@ -275,13 +288,29 @@ export default function FillReportPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-12 p-12 pt-0">
-          <div className="grid grid-cols-1 gap-x-12 gap-y-10">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-2">
             {template.fields.map((field) => (
-              <div key={field.key} className="space-y-4 md:col-span-1">
+              <div
+                key={field.key}
+                className={cn(
+                  "min-w-0 space-y-3",
+                  (field.type === "image" || field.type === "textarea") &&
+                    "md:col-span-2"
+                )}
+              >
                 <Label className="text-muted-foreground ml-1 flex items-center gap-2 text-xs font-black tracking-widest uppercase">
                   {field.label}{" "}
                   {field.type === "image" && (
                     <ImageIcon size={16} className="text-brand-500" />
+                  )}
+                  {field.type === "date" && (
+                    <CalendarDays size={16} className="text-brand-500" />
+                  )}
+                  {field.type === "textarea" && (
+                    <AlignLeft size={16} className="text-brand-500" />
+                  )}
+                  {field.type === "phone" && (
+                    <Phone size={16} className="text-brand-500" />
                   )}
                 </Label>
 
@@ -298,9 +327,57 @@ export default function FillReportPage({
                         handleInputChange(field.key, e.target.value)
                       }
                       placeholder={`Ex: Informe o ${field.label.toLowerCase()}`}
-                      className="bg-muted/30 focus-visible:ring-brand-500/30 h-14 rounded-2xl border-none text-lg font-medium"
+                      className="bg-muted/30 focus-visible:ring-brand-500/30 h-12 rounded-xl border-white/10 text-base font-medium"
                     />
                   </div>
+                )}
+
+                {field.type === "phone" && (
+                  <Input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={fieldFormatService.formatPhoneForInput(
+                      formData[field.key]
+                    )}
+                    onChange={(e) =>
+                      handleInputChange(
+                        field.key,
+                        fieldFormatService.formatPhoneForInput(e.target.value)
+                      )
+                    }
+                    placeholder="(00) 00000-0000"
+                    className="bg-muted/30 focus-visible:ring-brand-500/30 h-12 rounded-xl border-white/10 text-base font-medium"
+                  />
+                )}
+
+                {field.type === "textarea" && (
+                  <Textarea
+                    value={
+                      typeof formData[field.key] === "string" ||
+                      typeof formData[field.key] === "number"
+                        ? (formData[field.key] as string | number)
+                        : ""
+                    }
+                    onChange={(e) =>
+                      handleInputChange(field.key, e.target.value)
+                    }
+                    placeholder={`Escreva ${field.label.toLowerCase()}...`}
+                    className="bg-muted/30 focus-visible:ring-brand-500/30 min-h-40 rounded-xl border-white/10 text-base leading-relaxed font-medium"
+                  />
+                )}
+
+                {field.type === "date" && (
+                  <Input
+                    type="date"
+                    value={fieldFormatService.toDateInputValue(
+                      formData[field.key]
+                    )}
+                    onChange={(e) =>
+                      handleInputChange(field.key, e.target.value)
+                    }
+                    className="bg-muted/30 focus-visible:ring-brand-500/30 h-12 rounded-xl border-white/10 text-base font-medium"
+                  />
                 )}
 
                 {field.type === "image" && (
@@ -393,10 +470,22 @@ export default function FillReportPage({
                 id="evidence-upload"
                 type="file"
                 multiple
+                accept=".pdf,.docx,image/jpeg,image/png,image/webp"
                 className="hidden"
                 onChange={(e) => {
                   const files = Array.from(e.target.files || [])
+                  const invalidFile = files.find(
+                    (file) => !fileService.validateEvidenceFile(file).ok
+                  )
+
+                  if (invalidFile) {
+                    alert(fileService.validateEvidenceFile(invalidFile).message)
+                    e.target.value = ""
+                    return
+                  }
+
                   setEvidenceFiles((prev) => [...prev, ...files])
+                  e.target.value = ""
                 }}
               />
             </div>

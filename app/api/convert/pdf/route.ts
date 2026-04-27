@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
 import mammoth from "mammoth"
 import fs from "fs"
+import { auth } from "@/auth"
+import {
+  DOCX_MIME_TYPE,
+  FILE_LIMITS,
+  fileService,
+} from "@/features/documents/services/file.service"
 
 export const maxDuration = 60 // Allow more time for PDF generation
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ message: "Não autenticado" }, { status: 401 })
+    }
+
     // Dynamic imports can help with dependency tracing on Vercel for native modules
     const puppeteer = await import("puppeteer-core")
     const chromium = (await import("@sparticuz/chromium-min")).default
@@ -17,6 +28,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { message: "Arquivo não enviado" },
         { status: 400 }
+      )
+    }
+
+    if (!file.name.toLowerCase().endsWith(".docx")) {
+      return NextResponse.json(
+        { message: "Envie um arquivo .docx válido" },
+        { status: 400 }
+      )
+    }
+
+    if (file.type && file.type !== DOCX_MIME_TYPE) {
+      return NextResponse.json(
+        { message: "Tipo de arquivo não permitido" },
+        { status: 400 }
+      )
+    }
+
+    if (file.size > FILE_LIMITS.report) {
+      return NextResponse.json(
+        { message: "Arquivo muito grande para conversão" },
+        { status: 413 }
       )
     }
 
@@ -36,17 +68,23 @@ export async function POST(req: NextRequest) {
 
     console.log("PDF Conversion: Launching browser...")
     let executablePath = ""
-    const isVercel = !!process.env.VERCEL || process.env.NODE_ENV === "production"
+    const isVercel =
+      !!process.env.VERCEL || process.env.NODE_ENV === "production"
 
     if (isVercel) {
-      console.log("PDF Conversion: Vercel environment detected. Getting remote chromium path...")
+      console.log(
+        "PDF Conversion: Vercel environment detected. Getting remote chromium path..."
+      )
       try {
         // Using a remote binary pack to avoid path issues on Vercel
         executablePath = await chromium.executablePath(
           "https://github.com/Sparticuz/chromium/releases/download/v147.0.2/chromium-v147.0.2-pack.x64.tar"
         )
       } catch (pathError) {
-        console.error("PDF Conversion: Error getting chromium executable path:", pathError)
+        console.error(
+          "PDF Conversion: Error getting chromium executable path:",
+          pathError
+        )
         throw pathError
       }
     } else {
@@ -75,9 +113,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log(`PDF Conversion: Launching puppeteer with path: ${executablePath}`)
+    console.log(
+      `PDF Conversion: Launching puppeteer with path: ${executablePath}`
+    )
     const browser = await puppeteer.launch({
-      args: isVercel ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: isVercel
+        ? chromium.args
+        : ["--no-sandbox", "--disable-setuid-sandbox"],
       executablePath: executablePath,
       headless: isVercel ? "shell" : true,
       defaultViewport: { width: 1080, height: 1920 },
@@ -131,7 +173,8 @@ export async function POST(req: NextRequest) {
     return new NextResponse(Buffer.from(pdfBuffer), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${file.name.replace(".docx", ".pdf")}"`,
+        "Content-Disposition": `attachment; filename="${fileService.sanitizeFileName(file.name.replace(".docx", ".pdf"))}"`,
+        "X-Content-Type-Options": "nosniff",
       },
     })
   } catch (error) {

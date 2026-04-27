@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import {
+  AlignLeft,
   FileText,
   Download,
   Calendar,
@@ -15,6 +16,7 @@ import {
   Eye,
   Image as ImageIcon,
   Loader2,
+  Phone,
 } from "lucide-react"
 import { motion, AnimatePresence } from "motion/react"
 import { useAuth } from "@/features/auth/hooks/useAuth"
@@ -30,11 +32,13 @@ import {
   templateService,
   DocumentTemplate,
 } from "@/features/documents/services/template.service"
+import { fieldFormatService } from "@/features/documents/services/field-format.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 export default function DocumentsClient() {
   const { user } = useAuth()
@@ -158,6 +162,19 @@ export default function DocumentsClient() {
     )
   })
 
+  const hasActiveFilters =
+    searchTerm.trim() !== "" ||
+    categoryFilter !== "TODOS" ||
+    subcategoryFilter !== "TODOS" ||
+    authorFilter !== "TODOS"
+
+  const resetFilters = () => {
+    setSearchTerm("")
+    setCategoryFilter("TODOS")
+    setSubcategoryFilter("TODOS")
+    setAuthorFilter("TODOS")
+  }
+
   const uniqueCategories = [
     "TODOS",
     ...Array.from(
@@ -221,7 +238,10 @@ export default function DocumentsClient() {
           </Label>
           <Select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value)
+              setSubcategoryFilter("TODOS")
+            }}
             className="bg-card/40 h-10 rounded-xl border-white/5"
           >
             {uniqueCategories.map((cat) => (
@@ -262,6 +282,16 @@ export default function DocumentsClient() {
               </option>
             ))}
           </Select>
+        </div>
+        <div className="flex items-end">
+          <Button
+            variant="outline"
+            onClick={resetFilters}
+            disabled={!hasActiveFilters}
+            className="bg-card/40 h-10 w-full gap-2 rounded-xl border-white/10 font-bold"
+          >
+            <X size={16} /> Limpar filtros
+          </Button>
         </div>
       </div>
 
@@ -809,7 +839,10 @@ export default function DocumentsClient() {
                         {detailsTemplate?.fields.map((field) => (
                           <div
                             key={field.key}
-                            className="bg-muted/5 hover:bg-muted/10 rounded-2xl border border-white/5 p-6 transition-colors"
+                            className={cn(
+                              "bg-muted/5 hover:bg-muted/10 rounded-2xl border border-white/5 p-6 transition-colors",
+                              field.type === "textarea" && "sm:col-span-2"
+                            )}
                           >
                             <Label className="text-muted-foreground mb-2 flex items-center gap-2 text-[10px] font-black tracking-widest uppercase">
                               {field.label}
@@ -818,6 +851,21 @@ export default function DocumentsClient() {
                                   size={12}
                                   className="text-brand-500"
                                 />
+                              )}
+                              {field.type === "date" && (
+                                <Calendar
+                                  size={12}
+                                  className="text-brand-500"
+                                />
+                              )}
+                              {field.type === "textarea" && (
+                                <AlignLeft
+                                  size={12}
+                                  className="text-brand-500"
+                                />
+                              )}
+                              {field.type === "phone" && (
+                                <Phone size={12} className="text-brand-500" />
                               )}
                             </Label>
                             {field.type === "image" ? (
@@ -842,6 +890,36 @@ export default function DocumentsClient() {
                                   Imagem não informada.
                                 </p>
                               )
+                            ) : field.type === "date" ? (
+                              <p className="text-foreground text-lg font-bold">
+                                {fieldFormatService.formatDateForDisplay(
+                                  detailsDoc.formData?.[field.key]
+                                ) || (
+                                  <span className="text-muted-foreground italic opacity-30">
+                                    Vazio
+                                  </span>
+                                )}
+                              </p>
+                            ) : field.type === "textarea" ? (
+                              <p className="text-foreground text-sm leading-relaxed font-semibold whitespace-pre-wrap">
+                                {detailsDoc.formData?.[
+                                  field.key
+                                ]?.toString() || (
+                                  <span className="text-muted-foreground italic opacity-30">
+                                    Vazio
+                                  </span>
+                                )}
+                              </p>
+                            ) : field.type === "phone" ? (
+                              <p className="text-foreground text-lg font-bold">
+                                {fieldFormatService.formatPhoneForInput(
+                                  detailsDoc.formData?.[field.key]
+                                ) || (
+                                  <span className="text-muted-foreground italic opacity-30">
+                                    Vazio
+                                  </span>
+                                )}
+                              </p>
                             ) : (
                               <p className="text-foreground text-lg font-bold">
                                 {detailsDoc.formData?.[

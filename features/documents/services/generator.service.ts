@@ -7,7 +7,10 @@ import { saveAs } from "file-saver"
 export const generatorService = {
   async fetchBuffer(url: string): Promise<ArrayBuffer> {
     const proxyUrl = `/api/storage/proxy?url=${encodeURIComponent(url)}`
-    const response = await fetch(proxyUrl)
+    const response = await fetch(proxyUrl, {
+      cache: "no-store",
+      credentials: "same-origin",
+    })
     if (!response.ok) throw new Error("Failed to fetch template file via proxy")
     return await response.arrayBuffer()
   },

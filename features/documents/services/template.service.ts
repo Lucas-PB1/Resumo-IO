@@ -18,11 +18,12 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage"
+import { fileService } from "./file.service"
 
 export interface TemplateField {
   key: string
   label: string
-  type: "text" | "image"
+  type: "text" | "textarea" | "image" | "date" | "phone"
 }
 
 export interface DocumentTemplate {
@@ -51,17 +52,26 @@ export const templateService = {
   },
 
   async uploadTemplateFile(file: File, userId: string) {
-    const storagePath = `templates/${userId}/${Date.now()}_${file.name}`
+    const validation = fileService.validateTemplateFile(file)
+    if (!validation.ok) throw new Error(validation.message)
+
+    const safeFileName = fileService.sanitizeFileName(file.name)
+    const storagePath = `templates/${userId}/${Date.now()}_${safeFileName}`
     const storageRef = ref(storage, storagePath)
-    await uploadBytes(storageRef, file)
+    await uploadBytes(storageRef, file, {
+      contentType: fileService.getUploadContentType(file),
+    })
     const fileUrl = await getDownloadURL(storageRef)
     return { fileUrl, storagePath }
   },
 
   async uploadGeneratedFile(blob: Blob, fileName: string, userId: string) {
-    const storagePath = `reports/${userId}/${Date.now()}_${fileName}`
+    const safeFileName = fileService.sanitizeFileName(fileName)
+    const storagePath = `reports/${userId}/${Date.now()}_${safeFileName}`
     const storageRef = ref(storage, storagePath)
-    await uploadBytes(storageRef, blob)
+    await uploadBytes(storageRef, blob, {
+      contentType: blob.type || "application/octet-stream",
+    })
     const fileUrl = await getDownloadURL(storageRef)
     return { fileUrl, storagePath }
   },

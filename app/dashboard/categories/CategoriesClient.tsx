@@ -41,12 +41,23 @@ export default function CategoriesClient() {
   }, [user])
 
   const handleAddCategory = async () => {
-    if (!user || !newCatName.trim()) return
+    const categoryName = newCatName.trim()
+    if (!user || !categoryName) return
+
+    const categoryExists = categories.some(
+      (category) => category.name.toLowerCase() === categoryName.toLowerCase()
+    )
+
+    if (categoryExists) {
+      alert("Esta categoria já existe.")
+      return
+    }
+
     try {
-      const id = await taxonomyService.addCategory(newCatName.trim(), user.uid)
-      setCategories([
-        ...categories,
-        { id, name: newCatName.trim(), subcategories: [], ownerId: user.uid },
+      const id = await taxonomyService.addCategory(categoryName, user.uid)
+      setCategories((prev) => [
+        ...prev,
+        { id, name: categoryName, subcategories: [], ownerId: user.uid },
       ])
       setNewCatName("")
     } catch (err) {
@@ -63,7 +74,7 @@ export default function CategoriesClient() {
       return
     try {
       await taxonomyService.deleteCategory(id)
-      setCategories(categories.filter((c) => c.id !== id))
+      setCategories((prev) => prev.filter((c) => c.id !== id))
     } catch (err) {
       console.error("Delete category error", err)
       alert("Erro ao excluir categoria. Tente novamente.")
@@ -73,16 +84,27 @@ export default function CategoriesClient() {
   const handleAddSubcategory = async (categoryId: string) => {
     const subName = newSubNames[categoryId]?.trim()
     if (!subName) return
+
+    const category = categories.find((item) => item.id === categoryId)
+    const subcategoryExists = category?.subcategories.some(
+      (item) => item.toLowerCase() === subName.toLowerCase()
+    )
+
+    if (subcategoryExists) {
+      alert("Esta subcategoria já existe.")
+      return
+    }
+
     try {
       await taxonomyService.addSubcategory(categoryId, subName)
-      setCategories(
-        categories.map((c) =>
+      setCategories((prev) =>
+        prev.map((c) =>
           c.id === categoryId
             ? { ...c, subcategories: [...c.subcategories, subName] }
             : c
         )
       )
-      setNewSubNames({ ...newSubNames, [categoryId]: "" })
+      setNewSubNames((prev) => ({ ...prev, [categoryId]: "" }))
     } catch (err) {
       console.error("Add subcategory error", err)
       alert("Erro ao adicionar subcategoria.")
@@ -96,8 +118,8 @@ export default function CategoriesClient() {
     if (!confirm(`Deseja remover a subcategoria "${subName}"?`)) return
     try {
       await taxonomyService.deleteSubcategory(categoryId, subName)
-      setCategories(
-        categories.map((c) =>
+      setCategories((prev) =>
+        prev.map((c) =>
           c.id === categoryId
             ? {
                 ...c,

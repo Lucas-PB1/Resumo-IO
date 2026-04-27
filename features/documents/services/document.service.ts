@@ -18,6 +18,7 @@ import {
   uploadBytes,
   getDownloadURL,
 } from "firebase/storage"
+import { fileService } from "./file.service"
 
 export interface Evidence {
   fileName: string
@@ -59,9 +60,15 @@ export const documentService = {
     const evidence: Evidence[] = []
 
     for (const file of files) {
-      const storagePath = `evidence/${userId}/${Date.now()}_${file.name}`
+      const validation = fileService.validateEvidenceFile(file)
+      if (!validation.ok) throw new Error(validation.message)
+
+      const safeFileName = fileService.sanitizeFileName(file.name)
+      const storagePath = `evidence/${userId}/${Date.now()}_${safeFileName}`
       const storageRef = ref(storage, storagePath)
-      await uploadBytes(storageRef, file)
+      await uploadBytes(storageRef, file, {
+        contentType: fileService.getUploadContentType(file),
+      })
       const fileUrl = await getDownloadURL(storageRef)
 
       evidence.push({

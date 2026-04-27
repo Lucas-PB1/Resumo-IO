@@ -10,19 +10,28 @@ service cloud.firestore {
     // Rules for document templates
     match /doc_templates/{templateId} {
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow read, update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow read, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow update: if request.auth != null
+                    && resource.data.ownerId == request.auth.uid
+                    && request.resource.data.ownerId == request.auth.uid;
     }
     
     // Rules for generated documents
     match /generated_docs/{docId} {
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow read, update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow read, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow update: if request.auth != null
+                    && resource.data.ownerId == request.auth.uid
+                    && request.resource.data.ownerId == request.auth.uid;
     }
     
     // Rules for taxonomy (categories/subcategories)
     match /taxonomy/{categoryId} {
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow read, update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow read, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow update: if request.auth != null
+                    && resource.data.ownerId == request.auth.uid
+                    && request.resource.data.ownerId == request.auth.uid;
     }
   }
 }

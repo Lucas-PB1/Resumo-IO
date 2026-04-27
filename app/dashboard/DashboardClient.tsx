@@ -267,28 +267,28 @@ export default function DashboardClient() {
               <AreaChart data={timelineData}>
                 <defs>
                   <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b735b" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#8b735b" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#7a8fa1" stopOpacity={0.28} />
+                    <stop offset="95%" stopColor="#7a8fa1" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#2d241e"
-                  strokeOpacity={0.1}
+                  stroke="#2d3748"
+                  strokeOpacity={0.08}
                   vertical={false}
                 />
                 <XAxis
                   dataKey="name"
-                  stroke="#2d241e"
-                  strokeOpacity={0.3}
+                  stroke="#64748b"
+                  strokeOpacity={0.7}
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
                   dy={10}
                 />
                 <YAxis
-                  stroke="#2d241e"
-                  strokeOpacity={0.3}
+                  stroke="#64748b"
+                  strokeOpacity={0.7}
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
@@ -297,16 +297,17 @@ export default function DashboardClient() {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#ffffff",
-                    border: "1px solid rgba(139, 115, 91, 0.2)",
+                    border: "1px solid rgba(32, 35, 42, 0.1)",
                     borderRadius: "16px",
-                    boxShadow: "0 25px 50px -12px rgba(0,0,0,0.1)",
+                    boxShadow: "0 25px 50px -12px rgba(15,23,42,0.16)",
                   }}
-                  itemStyle={{ color: "#2d241e", fontWeight: "bold" }}
+                  itemStyle={{ color: "#282a2f", fontWeight: "bold" }}
+                  labelStyle={{ color: "#64748b" }}
                 />
                 <Area
                   type="monotone"
                   dataKey="total"
-                  stroke="#8b735b"
+                  stroke="#7a8fa1"
                   strokeWidth={4}
                   fillOpacity={1}
                   fill="url(#colorTotal)"
@@ -349,9 +350,11 @@ export default function DashboardClient() {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#ffffff",
-                    border: "1px solid rgba(139, 115, 91, 0.2)",
+                    border: "1px solid rgba(32, 35, 42, 0.1)",
                     borderRadius: "16px",
                   }}
+                  itemStyle={{ color: "#282a2f", fontWeight: "bold" }}
+                  labelStyle={{ color: "#64748b" }}
                 />
               </PieChart>
             </ResponsiveContainer>
