@@ -1,269 +1,275 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Plus, Trash2, Tag, FolderTree, X } from "lucide-react"
-import { motion, AnimatePresence } from "motion/react"
+import { FolderTree, Plus, Trash2, X } from "lucide-react"
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import {
   taxonomyService,
-  Category,
+  type Category,
 } from "@/features/documents/services/taxonomy.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card"
+import { PageHeader } from "@/components/ui/page-header"
+import { EmptyState } from "@/components/ui/empty-state"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/components/ui/toast"
+import { useConfirm } from "@/components/ui/confirm"
+
+const SUGGESTIONS = [
+  "Cível",
+  "Trabalhista",
+  "Família",
+  "Consumidor",
+  "Previdenciário",
+  "Criminal",
+  "Contratos",
+]
 
 export default function CategoriesClient() {
   const { user } = useAuth()
+  const toast = useToast()
+  const confirm = useConfirm()
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [newCatName, setNewCatName] = useState("")
-  const [newSubNames, setNewSubNames] = useState<Record<string, string>>({})
+  const [adding, setAdding] = useState(false)
 
   useEffect(() => {
-    async function fetchCategories() {
-      if (!user) return
-      try {
-        const data = await taxonomyService.getCategories(user.uid)
-        setCategories(data)
-      } catch (err) {
-        console.error("Failed to fetch categories", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchCategories()
+    if (!user) return
+    taxonomyService
+      .getCategories(user.uid)
+      .then(setCategories)
+      .catch((err) => console.error("Failed to fetch categories", err))
+      .finally(() => setLoading(false))
   }, [user])
 
-  const handleAddCategory = async () => {
-    const categoryName = newCatName.trim()
-    if (!user || !categoryName) return
-
-    const categoryExists = categories.some(
-      (category) => category.name.toLowerCase() === categoryName.toLowerCase()
-    )
-
-    if (categoryExists) {
-      alert("Esta categoria já existe.")
+  const addCategory = async (raw: string) => {
+    const name = raw.trim()
+    if (!user || !name) return
+    if (categories.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
+      toast.info(`"${name}" já existe`)
       return
     }
-
+    setAdding(true)
     try {
-      const id = await taxonomyService.addCategory(categoryName, user.uid)
+      const id = await taxonomyService.addCategory(name, user.uid)
       setCategories((prev) => [
         ...prev,
-        { id, name: categoryName, subcategories: [], ownerId: user.uid },
+        { id, name, subcategories: [], ownerId: user.uid },
       ])
       setNewCatName("")
     } catch (err) {
       console.error("Add category error", err)
+      toast.error("Não foi possível criar a categoria")
+    } finally {
+      setAdding(false)
     }
   }
 
-  const handleDeleteCategory = async (id: string) => {
-    if (
-      !confirm(
-        "Tem certeza que deseja excluir esta categoria? Todas as subcategorias serão removidas."
-      )
-    )
-      return
+  const deleteCategory = async (category: Category) => {
+    const ok = await confirm({
+      title: `Excluir "${category.name}"?`,
+      description:
+        category.subcategories.length > 0
+          ? `As ${category.subcategories.length} subcategorias também serão removidas. Modelos e documentos não são apagados.`
+          : "Modelos e documentos não são apagados.",
+      confirmLabel: "Excluir",
+      tone: "danger",
+    })
+    if (!ok) return
     try {
-      await taxonomyService.deleteCategory(id)
-      setCategories((prev) => prev.filter((c) => c.id !== id))
+      await taxonomyService.deleteCategory(category.id)
+      setCategories((prev) => prev.filter((c) => c.id !== category.id))
     } catch (err) {
       console.error("Delete category error", err)
-      alert("Erro ao excluir categoria. Tente novamente.")
+      toast.error("Não foi possível excluir a categoria")
     }
   }
 
-  const handleAddSubcategory = async (categoryId: string) => {
-    const subName = newSubNames[categoryId]?.trim()
-    if (!subName) return
-
-    const category = categories.find((item) => item.id === categoryId)
-    const subcategoryExists = category?.subcategories.some(
-      (item) => item.toLowerCase() === subName.toLowerCase()
-    )
-
-    if (subcategoryExists) {
-      alert("Esta subcategoria já existe.")
-      return
+  const addSubcategory = async (category: Category, raw: string) => {
+    const name = raw.trim()
+    if (!name) return false
+    if (
+      category.subcategories.some((s) => s.toLowerCase() === name.toLowerCase())
+    ) {
+      toast.info(`"${name}" já existe em ${category.name}`)
+      return false
     }
-
     try {
-      await taxonomyService.addSubcategory(categoryId, subName)
+      await taxonomyService.addSubcategory(category.id, name)
       setCategories((prev) =>
         prev.map((c) =>
-          c.id === categoryId
-            ? { ...c, subcategories: [...c.subcategories, subName] }
+          c.id === category.id
+            ? { ...c, subcategories: [...c.subcategories, name] }
             : c
         )
       )
-      setNewSubNames((prev) => ({ ...prev, [categoryId]: "" }))
+      return true
     } catch (err) {
       console.error("Add subcategory error", err)
-      alert("Erro ao adicionar subcategoria.")
+      toast.error("Não foi possível adicionar a subcategoria")
+      return false
     }
   }
 
-  const handleDeleteSubcategory = async (
-    categoryId: string,
-    subName: string
-  ) => {
-    if (!confirm(`Deseja remover a subcategoria "${subName}"?`)) return
+  const deleteSubcategory = async (category: Category, name: string) => {
     try {
-      await taxonomyService.deleteSubcategory(categoryId, subName)
+      await taxonomyService.deleteSubcategory(category.id, name)
       setCategories((prev) =>
         prev.map((c) =>
-          c.id === categoryId
-            ? {
-                ...c,
-                subcategories: c.subcategories.filter((s) => s !== subName),
-              }
+          c.id === category.id
+            ? { ...c, subcategories: c.subcategories.filter((s) => s !== name) }
             : c
         )
       )
+      toast.success(`"${name}" removida`, {
+        action: {
+          label: "Desfazer",
+          onClick: () =>
+            addSubcategory({ ...category, subcategories: [] }, name),
+        },
+      })
     } catch (err) {
       console.error("Delete subcategory error", err)
-      alert("Erro ao excluir subcategoria.")
+      toast.error("Não foi possível remover a subcategoria")
     }
   }
 
-  if (loading)
-    return (
-      <div className="text-muted-foreground animate-pulse p-12 text-center">
-        Carregando taxonomia...
-      </div>
-    )
+  const unusedSuggestions = SUGGESTIONS.filter(
+    (s) => !categories.some((c) => c.name.toLowerCase() === s.toLowerCase())
+  )
 
   return (
-    <div className="mx-auto max-w-5xl space-y-12 pb-20">
-      <div className="space-y-1 text-center md:text-left">
-        <h1 className="text-foreground flex items-center justify-center gap-4 text-4xl font-black tracking-tight md:justify-start">
-          Categorias <Tag className="text-brand-500" />
-        </h1>
-        <p className="text-muted-foreground text-lg font-medium">
-          Gerencie a organização dos seus modelos e documentos.
-        </p>
-      </div>
+    <div className="max-w-3xl">
+      <PageHeader
+        title="Categorias"
+        description="Agrupe modelos e documentos por área de atuação. Subcategorias ajudam a filtrar o histórico."
+      />
 
-      <Card className="bg-card/60 overflow-hidden border-none shadow-2xl backdrop-blur-md">
-        <div className="bg-brand-500 h-2 w-full" />
-        <CardHeader className="p-8">
-          <CardTitle>Nova Categoria</CardTitle>
-          <CardDescription>
-            Crie um agrupador principal para seus arquivos.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-4 p-8 pt-0">
-          <Input
-            value={newCatName}
-            onChange={(e) => setNewCatName(e.target.value)}
-            placeholder="Nome da categoria (ex: Jurídico, RH)"
-            className="bg-muted/30 h-14 rounded-2xl border-none text-lg font-medium"
-            onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-          />
-          <Button
-            onClick={handleAddCategory}
-            size="lg"
-            className="shadow-brand-500/20 h-14 rounded-2xl px-8 shadow-xl"
-          >
-            <Plus size={20} className="mr-2" /> Adicionar
-          </Button>
-        </CardContent>
-      </Card>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          addCategory(newCatName)
+        }}
+        className="mb-3 flex gap-2"
+      >
+        <Input
+          aria-label="Nova categoria"
+          placeholder="Nova categoria, ex.: Trabalhista"
+          value={newCatName}
+          onChange={(e) => setNewCatName(e.target.value)}
+        />
+        <Button type="submit" isLoading={adding} disabled={!newCatName.trim()}>
+          {!adding && <Plus size={16} />} Criar
+        </Button>
+      </form>
 
-      <div className="grid grid-cols-1 gap-8">
-        <AnimatePresence>
-          {categories.map((cat, index) => (
-            <motion.div
-              key={cat.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+      {!loading && unusedSuggestions.length > 0 && categories.length < 4 && (
+        <div className="text-muted-foreground mb-8 flex flex-wrap items-center gap-1.5 text-[13px]">
+          Sugestões:
+          {unusedSuggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => addCategory(s)}
+              className="border-border-strong hover:bg-muted hover:text-foreground rounded-full border border-dashed px-2.5 py-0.5"
             >
-              <Card className="bg-card/40 group overflow-hidden border-none shadow-xl backdrop-blur-sm">
-                <CardHeader className="flex flex-row items-center justify-between p-8 pb-4">
-                  <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-3 text-2xl font-bold">
-                      <FolderTree className="text-brand-500" size={24} />
-                      {cat.name}
-                    </CardTitle>
-                    <CardDescription>
-                      {cat.subcategories.length} subcategorias cadastradas
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteCategory(cat.id)}
-                    className="rounded-xl text-red-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/10"
-                  >
-                    <Trash2 size={20} />
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-6 p-8 pt-4">
-                  <div className="flex flex-wrap gap-2">
-                    {cat.subcategories.map((sub) => (
-                      <div
-                        key={sub}
-                        className="bg-brand-500/10 text-brand-400 border-brand-500/20 group/sub flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-bold"
-                      >
-                        {sub}
-                        <button
-                          onClick={() => handleDeleteSubcategory(cat.id, sub)}
-                          className="transition-colors hover:text-red-400"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex max-w-md items-center gap-3 border-t border-white/5 pt-4">
-                    <Input
-                      placeholder="Nova subcategoria..."
-                      value={newSubNames[cat.id] || ""}
-                      onChange={(e) =>
-                        setNewSubNames({
-                          ...newSubNames,
-                          [cat.id]: e.target.value,
-                        })
-                      }
-                      className="bg-muted/20 h-10 rounded-xl border-none text-sm"
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && handleAddSubcategory(cat.id)
-                      }
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAddSubcategory(cat.id)}
-                      className="border-brand-500/20 text-brand-500 hover:bg-brand-500 h-10 rounded-xl font-bold hover:text-white"
-                    >
-                      <Plus size={16} />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+              + {s}
+            </button>
           ))}
-        </AnimatePresence>
+        </div>
+      )}
 
-        {categories.length === 0 && (
-          <div className="bg-card/20 rounded-3xl border-2 border-dashed border-white/5 py-20 text-center">
-            <Tag className="text-muted-foreground/30 mx-auto mb-4" size={48} />
-            <p className="text-muted-foreground font-medium italic">
-              Nenhuma categoria cadastrada ainda.
-            </p>
-          </div>
-        )}
-      </div>
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+      ) : categories.length === 0 ? (
+        <EmptyState
+          icon={FolderTree}
+          title="Nenhuma categoria"
+          description="Crie uma acima ou use uma das sugestões."
+        />
+      ) : (
+        <ul className="space-y-3">
+          {[...categories]
+            .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+            .map((category) => (
+              <CategoryItem
+                key={category.id}
+                category={category}
+                onDelete={() => deleteCategory(category)}
+                onAddSub={(name) => addSubcategory(category, name)}
+                onDeleteSub={(name) => deleteSubcategory(category, name)}
+              />
+            ))}
+        </ul>
+      )}
     </div>
+  )
+}
+
+function CategoryItem({
+  category,
+  onDelete,
+  onAddSub,
+  onDeleteSub,
+}: {
+  category: Category
+  onDelete: () => void
+  onAddSub: (name: string) => Promise<boolean>
+  onDeleteSub: (name: string) => void
+}) {
+  const [value, setValue] = useState("")
+
+  return (
+    <li className="bg-card border-border group rounded-xl border p-4 shadow-xs">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-[15px] font-medium">{category.name}</h2>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Excluir ${category.name}`}
+          onClick={onDelete}
+          className="hover:text-danger md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+        >
+          <Trash2 size={15} />
+        </Button>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {category.subcategories.map((sub) => (
+          <span
+            key={sub}
+            className="bg-muted inline-flex h-7 items-center gap-1 rounded-md pr-1 pl-2.5 text-[13px]"
+          >
+            {sub}
+            <button
+              type="button"
+              aria-label={`Remover ${sub}`}
+              onClick={() => onDeleteSub(sub)}
+              className="text-subtle-foreground hover:text-foreground hover:bg-border rounded p-0.5"
+            >
+              <X size={12} />
+            </button>
+          </span>
+        ))}
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault()
+            if (await onAddSub(value)) setValue("")
+          }}
+        >
+          <input
+            aria-label={`Nova subcategoria em ${category.name}`}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="+ subcategoria"
+            className="placeholder:text-subtle-foreground focus:border-border-strong focus:bg-input h-7 w-36 rounded-md border border-transparent bg-transparent px-2 text-[13px] outline-none"
+          />
+        </form>
+      </div>
+    </li>
   )
 }

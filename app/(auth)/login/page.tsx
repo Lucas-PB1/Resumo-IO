@@ -3,7 +3,7 @@ import { LoginForm } from "@/features/auth/components/LoginForm"
 
 export const metadata: Metadata = {
   title: "Entrar",
-  description: "Acesse sua conta no Resume IO para gerenciar seus currículos.",
+  description: "Acesse seus modelos e documentos.",
 }
 
 export default function LoginPage() {

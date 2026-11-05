@@ -1,72 +1,141 @@
 @import "tailwindcss";
 
+/* Tema escuro controlado pela classe `.dark` no <html> (ver ThemeScript). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif:
+    var(--font-newsreader), "Iowan Old Style", Charter, Georgia, serif;
   --font-mono:
     "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
-  --color-brand-50: #f8f6f2;
-  --color-brand-100: #efeade;
-  --color-brand-200: #ddd4c2;
-  --color-brand-300: #c2ac91;
-  --color-brand-400: #a98d71;
-  --color-brand-500: #8b735b;
-  --color-brand-600: #745f4a;
-  --color-brand-700: #5d4c3c;
-  --color-brand-800: #4a3d31;
-  --color-brand-900: #3c3228;
-  --color-brand-950: #1e1914;
-
-  --color-moss: #8a9a5b;
-  --color-terracotta: #c17c67;
-  --color-amber: #d4a373;
-  --color-dusty-blue: #7a8fa1;
+  /* Azul-tinta: cor de ação principal */
+  --color-brand-50: #f2f5f9;
+  --color-brand-100: #e1e8f1;
+  --color-brand-200: #c5d3e4;
+  --color-brand-300: #9db4d0;
+  --color-brand-400: #6f8fb6;
+  --color-brand-500: #4d719c;
+  --color-brand-600: #3b5a82;
+  --color-brand-700: #2f486a;
+  --color-brand-800: #263a55;
+  --color-brand-900: #1e2e44;
+  --color-brand-950: #121c2b;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
+  --color-ring: var(--ring);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-paper: var(--paper);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 8px);
-  --radius-2xl: calc(var(--radius) + 16px);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
 
-  --animate-in: animate-in 0.3s ease-out;
-  --animate-out: animate-out 0.2s ease-in;
+  --shadow-xs: 0 1px 2px rgb(20 20 18 / 0.05);
+  --shadow-sm: 0 1px 3px rgb(20 20 18 / 0.06), 0 1px 2px rgb(20 20 18 / 0.04);
+  --shadow-md:
+    0 4px 12px -2px rgb(20 20 18 / 0.08), 0 2px 4px -2px rgb(20 20 18 / 0.05);
+  --shadow-lg:
+    0 16px 40px -8px rgb(20 20 18 / 0.14), 0 4px 10px -4px rgb(20 20 18 / 0.06);
 }
 
 :root {
-  --background: #f7f7f4;
-  --foreground: #282a2f;
+  color-scheme: light;
+
+  --background: #f6f5f1;
+  --surface: #efede7;
+  --foreground: #1c1b18;
 
   --card: #ffffff;
-  --card-foreground: #282a2f;
+  --card-foreground: #1c1b18;
+  --paper: #ffffff;
 
-  --border: rgba(32, 35, 42, 0.09);
-  --input: rgba(32, 35, 42, 0.04);
+  --border: #e3e0d8;
+  --border-strong: #cfcbc0;
+  --input: #ffffff;
+  --ring: rgb(59 90 130 / 0.35);
 
-  --primary: var(--color-dusty-blue);
+  --primary: #2f486a;
+  --primary-hover: #263a55;
   --primary-foreground: #ffffff;
 
-  --accent: rgba(122, 143, 161, 0.1);
-  --accent-foreground: var(--color-dusty-blue);
+  --accent: #e9eef5;
+  --accent-foreground: #2f486a;
 
-  --muted: #eceff1;
-  --muted-foreground: #6b7280;
+  --muted: #f0eee8;
+  --muted-foreground: #625f57;
+  --subtle-foreground: #8a867c;
 
-  --radius: 1rem;
+  --success: #2f7a4f;
+  --success-soft: #e6f2ea;
+  --warning: #9a6512;
+  --warning-soft: #fbf0dc;
+  --danger: #b4372f;
+  --danger-soft: #fbe9e7;
+}
+
+:root.dark {
+  color-scheme: dark;
+
+  --background: #131312;
+  --surface: #191918;
+  --foreground: #ecebe6;
+
+  --card: #1c1c1a;
+  --card-foreground: #ecebe6;
+  --paper: #f7f6f2;
+
+  --border: #2c2b28;
+  --border-strong: #3d3b37;
+  --input: #161615;
+  --ring: rgb(140 170 210 / 0.4);
+
+  --primary: #9db4d0;
+  --primary-hover: #b6c8de;
+  --primary-foreground: #121c2b;
+
+  --accent: #212a36;
+  --accent-foreground: #c5d3e4;
+
+  --muted: #232321;
+  --muted-foreground: #a6a399;
+  --subtle-foreground: #7b786f;
+
+  --success: #6cc08f;
+  --success-soft: #1a2a20;
+  --warning: #e0b061;
+  --warning-soft: #2c2416;
+  --danger: #ec8a80;
+  --danger-soft: #2e1b19;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -74,10 +143,30 @@ body {
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-image:
-    linear-gradient(rgba(32, 35, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(32, 35, 42, 0.035) 1px, transparent 1px);
-  background-size: 44px 44px;
+  font-feature-settings: "cv11", "ss01";
+}
+
+::selection {
+  background: rgb(77 113 156 / 0.22);
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before {
+    border-color: var(--border);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
 @layer utilities {
@@ -86,4 +175,63 @@ body {
     align-items: center;
     justify-content: center;
   }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Preview do documento (HTML gerado pelo mammoth) */
+.doc-preview {
+  font-family: "Times New Roman", Times, Georgia, serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: #1c1b18;
+}
+.doc-preview p {
+  margin: 0 0 0.6em;
+}
+.doc-preview h1,
+.doc-preview h2,
+.doc-preview h3 {
+  font-weight: 700;
+  margin: 1em 0 0.5em;
+}
+.doc-preview h1 {
+  font-size: 16pt;
+}
+.doc-preview h2 {
+  font-size: 14pt;
+}
+.doc-preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.6em 0;
+}
+.doc-preview td,
+.doc-preview th {
+  border: 1px solid #d6d3cb;
+  padding: 4px 6px;
+  vertical-align: top;
+}
+.doc-preview img {
+  max-width: 100%;
+  height: auto;
+}
+.doc-preview ul,
+.doc-preview ol {
+  padding-left: 1.5em;
+  margin: 0 0 0.6em;
+}
+.doc-preview ul {
+  list-style: disc;
+}
+.doc-preview ol {
+  list-style: decimal;
+}
+.doc-preview mark {
+  background: #fdf0c4;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 2px;
 }

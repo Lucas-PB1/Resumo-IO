@@ -1,9 +1,9 @@
 "use client"
 
+import Link from "next/link"
 import React, { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { KeyRound } from "lucide-react"
 import { motion } from "motion/react"
 
 import { forgotPasswordSchema, ForgotPasswordFormData } from "../schemas"
@@ -46,24 +46,17 @@ export const ForgotPasswordForm = () => {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-md">
-      <CardHeader className="space-y-2 text-center">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-primary/10 text-primary mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full"
-        >
-          <KeyRound size={24} />
-        </motion.div>
-        <CardTitle className="text-2xl font-bold tracking-tight">
-          Recuperar Senha
+    <Card className="mx-auto w-full max-w-sm shadow-sm">
+      <CardHeader className="space-y-1 px-6 pt-7 pb-5">
+        <CardTitle className="font-serif text-[26px] font-medium tracking-[-0.01em]">
+          Recuperar senha
         </CardTitle>
         <CardDescription>Enviaremos um link para seu email</CardDescription>
       </CardHeader>
 
       {!success ? (
         <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 px-6">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -76,31 +69,31 @@ export const ForgotPasswordForm = () => {
             </div>
 
             {errorStatus && (
-              <div className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-500">
+              <div className="bg-danger-soft text-danger rounded-lg px-3 py-2.5 text-sm">
                 {errorStatus}
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col gap-4 border-0 px-6 pt-5 pb-7">
             <Button type="submit" className="w-full" isLoading={isSubmitting}>
               Enviar Link
             </Button>
             <div className="text-muted-foreground flex w-full justify-between px-2 text-center text-sm">
-              <a
+              <Link
                 href="/login"
                 className="text-primary font-medium hover:underline"
               >
                 Voltar para o Login
-              </a>
+              </Link>
             </div>
           </CardFooter>
         </form>
       ) : (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="rounded-md border border-green-500/20 bg-green-500/10 p-4 text-center text-green-500"
+            className="bg-success-soft text-success rounded-lg p-4 text-sm"
           >
             Se houver uma conta associada a este email, você receberá um link
             para redefinir sua senha.

@@ -1,27 +1,10 @@
 "use client"
 
-import {
-  AlignLeft,
-  CalendarDays,
-  Hash,
-  Image as ImageIcon,
-  Phone,
-  Trash2,
-  Type,
-} from "lucide-react"
-import { motion } from "motion/react"
-
+import { ArrowDown, ArrowUp, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { TemplateField } from "@/features/documents/services/template.service"
 
 interface TemplateFieldListProps {
@@ -30,6 +13,15 @@ interface TemplateFieldListProps {
   emptyMessage: string
   onChange: (index: number, updates: Partial<TemplateField>) => void
   onRemove: (index: number) => void
+  onMove?: (index: number, delta: -1 | 1) => void
+}
+
+export const FIELD_TYPE_LABELS: Record<TemplateField["type"], string> = {
+  text: "Texto curto",
+  textarea: "Texto longo",
+  date: "Data",
+  phone: "Telefone",
+  image: "Imagem",
 }
 
 export function TemplateFieldList({
@@ -38,107 +30,109 @@ export function TemplateFieldList({
   emptyMessage,
   onChange,
   onRemove,
+  onMove,
 }: TemplateFieldListProps) {
-  const renderFieldTypeIcon = (type: TemplateField["type"]) => {
-    if (type === "image") return <ImageIcon size={14} />
-    if (type === "date") return <CalendarDays size={14} />
-    if (type === "phone") return <Phone size={14} />
-    if (type === "textarea") return <AlignLeft size={14} />
-    return <Type size={14} />
-  }
-
   return (
-    <Card className="bg-card/60 border-white/10 shadow-2xl backdrop-blur-2xl">
-      <CardHeader>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>Etiquetas Detectadas</CardTitle>
-            <CardDescription>
-              Configure como os dados serão inseridos neste modelo.
-            </CardDescription>
-          </div>
-          <div className="text-brand-300 bg-brand-500/10 border-brand-500/20 flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase">
-            <Hash size={14} /> {fields.length} campos
-          </div>
+    <div className="bg-card border-border rounded-xl border shadow-xs">
+      <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+        <div>
+          <h2 className="text-sm font-medium">Campos do formulário</h2>
+          <p className="text-muted-foreground text-[13px]">
+            Encontrados no arquivo. Ajuste o nome que aparece no formulário, o
+            tipo e a ordem.
+          </p>
         </div>
-      </CardHeader>
-      <CardContent>
-        {isScanning ? (
-          <div className="text-muted-foreground animate-pulse rounded-2xl border border-white/5 bg-white/5 py-20 text-center">
-            Escaneando etiquetas no Word...
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {fields.map((field, index) => (
-              <motion.div
-                key={field.key}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.04 }}
-                className="bg-muted/10 group hover:bg-muted/20 relative flex flex-col gap-4 rounded-2xl border border-white/5 p-5 transition-all"
-              >
+        {fields.length > 0 && (
+          <span className="text-muted-foreground tabular text-sm">
+            {fields.length}
+          </span>
+        )}
+      </div>
+
+      {isScanning ? (
+        <div className="divide-border divide-y">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex gap-3 px-5 py-3">
+              <Skeleton className="h-9 flex-1" />
+              <Skeleton className="h-9 w-36" />
+            </div>
+          ))}
+        </div>
+      ) : fields.length === 0 ? (
+        <p className="text-muted-foreground px-5 py-14 text-center text-sm">
+          {emptyMessage}
+        </p>
+      ) : (
+        <ol className="divide-border divide-y">
+          {fields.map((field, index) => (
+            <li
+              key={field.key}
+              className="group flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center"
+            >
+              <div className="min-w-0 flex-1 space-y-1">
+                <code className="text-subtle-foreground block truncate font-mono text-[11px]">
+                  {`{${field.key}}`}
+                </code>
+                <Input
+                  aria-label={`Rótulo de ${field.key}`}
+                  value={field.label}
+                  onChange={(e) => onChange(index, { label: e.target.value })}
+                  placeholder="Nome no formulário"
+                />
+              </div>
+              <div className="flex items-end gap-1 sm:pt-4">
+                <Select
+                  aria-label={`Tipo de ${field.key}`}
+                  value={field.type}
+                  onChange={(e) =>
+                    onChange(index, {
+                      type: e.target.value as TemplateField["type"],
+                    })
+                  }
+                  className="sm:w-36"
+                >
+                  {Object.entries(FIELD_TYPE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+                {onMove && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Mover para cima"
+                      disabled={index === 0}
+                      onClick={() => onMove(index, -1)}
+                    >
+                      <ArrowUp size={15} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Mover para baixo"
+                      disabled={index === fields.length - 1}
+                      onClick={() => onMove(index, 1)}
+                    >
+                      <ArrowDown size={15} />
+                    </Button>
+                  </>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label={`Remover ${field.key}`}
                   onClick={() => onRemove(index)}
-                  aria-label={`Remover etiqueta ${field.key}`}
-                  className="absolute top-4 right-4 h-9 w-9 rounded-xl bg-red-500/5 text-red-400 transition-opacity hover:bg-red-500 hover:text-white sm:h-8 sm:w-8 sm:opacity-0 sm:group-hover:opacity-100"
+                  className="hover:text-danger"
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={15} />
                 </Button>
-
-                <div className="flex flex-col gap-6 pr-10 sm:flex-row sm:items-end sm:gap-4">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Hash size={14} className="text-brand-400" />
-                      <Label className="text-muted-foreground text-[10px] font-black tracking-widest uppercase">
-                        Chave:{" "}
-                        <span className="text-foreground">{field.key}</span>
-                      </Label>
-                    </div>
-                    <Input
-                      value={field.label}
-                      onChange={(event) =>
-                        onChange(index, { label: event.target.value })
-                      }
-                      placeholder="Nome no formulário"
-                      className="bg-background/60 h-12 rounded-xl border-white/10 font-bold placeholder:font-medium placeholder:opacity-30"
-                    />
-                  </div>
-
-                  <div className="w-full space-y-3 sm:w-56">
-                    <Label className="text-muted-foreground flex items-center gap-2 text-[10px] font-black tracking-widest uppercase">
-                      {renderFieldTypeIcon(field.type)}
-                      Tipo do Campo
-                    </Label>
-                    <Select
-                      value={field.type}
-                      onChange={(event) =>
-                        onChange(index, {
-                          type: event.target.value as TemplateField["type"],
-                        })
-                      }
-                      className="bg-background/60 h-12 rounded-xl border-white/10 font-bold"
-                    >
-                      <option value="text">Texto Simples</option>
-                      <option value="textarea">Texto Longo</option>
-                      <option value="phone">Telefone</option>
-                      <option value="date">Data</option>
-                      <option value="image">Imagem / Foto</option>
-                    </Select>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-
-            {fields.length === 0 && (
-              <div className="text-muted-foreground/70 rounded-2xl border border-dashed border-white/10 bg-white/5 py-20 text-center italic">
-                {emptyMessage}
               </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   )
 }

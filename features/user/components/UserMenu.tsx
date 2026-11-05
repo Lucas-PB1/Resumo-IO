@@ -1,28 +1,68 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { User, LogOut, ChevronDown } from "lucide-react"
-import { motion, AnimatePresence } from "motion/react"
+import { ChevronsUpDown, LogOut, UserRound } from "lucide-react"
+import { AnimatePresence, motion } from "motion/react"
 
 import { useAuth } from "@/features/auth/hooks/useAuth"
 import { authService } from "@/features/auth/services/auth.service"
-import {
-  userService,
-  UserProfileData,
-} from "@/features/user/services/user.service"
+import { useProfile } from "@/features/user/hooks/useProfile"
+import { ThemeToggle } from "@/components/theme/theme-toggle"
+import { cn } from "@/lib/utils"
 
-export const UserMenu = () => {
+export function Avatar({
+  name,
+  photoURL,
+  className,
+}: {
+  name: string
+  photoURL?: string | null
+  className?: string
+}) {
+  return (
+    <span
+      className={cn(
+        "bg-accent text-accent-foreground flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-[13px] font-semibold",
+        className
+      )}
+    >
+      {photoURL ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photoURL} alt="" className="h-full w-full object-cover" />
+      ) : (
+        name.charAt(0).toUpperCase()
+      )}
+    </span>
+  )
+}
+
+export const UserMenu = ({
+  placement = "top",
+  compact = false,
+}: {
+  placement?: "top" | "bottom"
+  compact?: boolean
+}) => {
   const { user } = useAuth()
   const router = useRouter()
+  const { displayName, email, photoURL } = useProfile()
   const [isOpen, setIsOpen] = useState(false)
-  const [profile, setProfile] = useState<UserProfileData | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (user) {
-      userService.getUserProfile(user.uid).then(setProfile)
+    if (!isOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setIsOpen(false)
     }
-  }, [user])
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setIsOpen(false)
+    document.addEventListener("mousedown", onClick)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onClick)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [isOpen])
 
   if (!user) return null
 
@@ -31,75 +71,80 @@ export const UserMenu = () => {
     router.push("/login")
   }
 
-  const displayName = profile
-    ? `${profile.firstName} ${profile.lastName}`
-    : user.email
-  const photoURL = profile?.photoURL || user.photoURL
-
   return (
-    <div className="relative">
+    <div ref={rootRef} className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="hover:bg-muted hover:border-border flex items-center gap-2 rounded-md border border-transparent p-2 transition-colors"
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        className={cn(
+          "hover:bg-muted flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors",
+          isOpen && "bg-muted"
+        )}
       >
-        <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border font-medium">
-          {photoURL ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photoURL}
-              alt="Avatar"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            displayName?.charAt(0).toUpperCase()
-          )}
-        </div>
-        <span className="hidden max-w-[150px] truncate text-sm font-medium sm:inline-block">
-          {displayName}
-        </span>
-        <ChevronDown size={14} className="text-muted-foreground" />
+        <Avatar name={displayName || "?"} photoURL={photoURL} />
+        {!compact && (
+          <>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">
+                {displayName}
+              </span>
+              <span className="text-muted-foreground block truncate text-xs">
+                {email}
+              </span>
+            </span>
+            <ChevronsUpDown size={14} className="text-subtle-foreground" />
+          </>
+        )}
       </button>
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="bg-card border-brand-500/10 ring-brand-900/5 absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-2xl border shadow-2xl ring-1 transition-all"
+            role="menu"
+            initial={{ opacity: 0, y: placement === "top" ? 4 : -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+            className={cn(
+              "bg-card border-border absolute z-50 w-60 overflow-hidden rounded-xl border p-1 shadow-lg",
+              placement === "top"
+                ? "bottom-full left-0 mb-2"
+                : "top-full right-0 mt-2"
+            )}
           >
-            <div className="border-brand-500/10 from-brand-500/5 border-b bg-linear-to-b to-transparent p-5">
-              <p className="text-foreground text-sm font-bold tracking-tight">
-                {displayName}
-              </p>
-              <p className="text-muted-foreground mt-0.5 truncate text-xs font-medium">
-                {user.email}
-              </p>
+            <div className="px-2.5 py-2">
+              <p className="truncate text-sm font-medium">{displayName}</p>
+              <p className="text-muted-foreground truncate text-xs">{email}</p>
             </div>
-            <div className="p-2">
-              <button
-                onClick={() => {
-                  setIsOpen(false)
-                  router.push("/dashboard/profile")
-                }}
-                className="hover:bg-brand-500/10 hover:text-brand-400 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors"
-              >
-                <div className="bg-brand-500/10 rounded-lg p-1.5">
-                  <User size={16} />
-                </div>
-                Meu Perfil
-              </button>
-              <button
-                onClick={handleLogout}
-                className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10"
-              >
-                <div className="rounded-lg bg-red-500/10 p-1.5">
-                  <LogOut size={16} />
-                </div>
-                Sair
-              </button>
+            <div className="border-border my-1 border-t" />
+            <button
+              role="menuitem"
+              type="button"
+              onClick={() => {
+                setIsOpen(false)
+                router.push("/dashboard/profile")
+              }}
+              className="hover:bg-muted flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm"
+            >
+              <UserRound size={16} className="text-muted-foreground" />
+              Meu perfil
+            </button>
+            <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-sm">
+              <span>Tema</span>
+              <ThemeToggle className="w-28" />
             </div>
+            <div className="border-border my-1 border-t" />
+            <button
+              role="menuitem"
+              type="button"
+              onClick={handleLogout}
+              className="text-danger hover:bg-danger-soft flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm"
+            >
+              <LogOut size={16} />
+              Sair
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
