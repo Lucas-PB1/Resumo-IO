@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 <!-- END:nextjs-agent-rules -->
 
-# Project Guidelines (Minuta)
+# Project Guidelines (Docpronto)
 
 Produto: transforma modelos `.docx` com `{etiquetas}` em formulários e gera documentos (petições, relatórios, pareceres). Público principal: advogados(as) que querem acelerar peças repetitivas. O nome do produto fica em `lib/brand.ts` — nunca escreva o nome direto no código.
 

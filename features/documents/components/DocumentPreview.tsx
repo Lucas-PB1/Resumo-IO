@@ -102,7 +102,7 @@ export function DocumentPreview({
       <div
         ref={paperRef}
         onClick={onClick}
-        className="bg-paper border-border mx-auto min-h-[60vh] w-full rounded-sm border px-[8%] py-[9%] shadow-md [&_mark]:cursor-pointer [&_mark[data-active]]:outline-2 [&_mark[data-active]]:outline-offset-1 [&_mark[data-active]]:outline-[#4d719c]"
+        className="bg-paper border-border mx-auto min-h-[60vh] w-full overflow-x-auto rounded-sm border px-4 py-6 shadow-md sm:px-[8%] sm:py-[9%] [&_mark]:cursor-pointer [&_mark[data-active]]:outline-2 [&_mark[data-active]]:outline-offset-1 [&_mark[data-active]]:outline-[#4d719c]"
       >
         {error ? (
           <p className="text-sm text-[#625f57]">

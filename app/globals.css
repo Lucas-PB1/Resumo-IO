@@ -184,9 +184,16 @@ body {
 /* Preview do documento (HTML gerado pelo mammoth) */
 .doc-preview {
   font-family: "Times New Roman", Times, Georgia, serif;
-  font-size: 12pt;
+  font-size: 10.5pt;
   line-height: 1.5;
   color: #1c1b18;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+@media (min-width: 640px) {
+  .doc-preview {
+    font-size: 12pt;
+  }
 }
 .doc-preview p {
   margin: 0 0 0.6em;
@@ -203,16 +210,28 @@ body {
 .doc-preview h2 {
   font-size: 14pt;
 }
+/* Células quebram o texto; se ainda assim não couber, a folha rola de lado. */
 .doc-preview table {
   border-collapse: collapse;
+  table-layout: auto;
   width: 100%;
+  max-width: 100%;
   margin: 0.6em 0;
 }
 .doc-preview td,
 .doc-preview th {
   border: 1px solid #d6d3cb;
-  padding: 4px 6px;
+  padding: 3px 5px;
   vertical-align: top;
+  overflow-wrap: break-word;
+}
+.doc-preview td p,
+.doc-preview th p {
+  margin: 0 0 0.3em;
+}
+.doc-preview td p:last-child,
+.doc-preview th p:last-child {
+  margin-bottom: 0;
 }
 .doc-preview img {
   max-width: 100%;

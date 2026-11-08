@@ -24,7 +24,7 @@ export function Logo({
         />
         <path d="M16 3.5v5h5" className="fill-primary-hover" />
         <path
-          d="M9 18.5v-7l4 4.2 4-4.2v7"
+          d="M10.5 11.4h2.1a3.3 3.3 0 0 1 0 6.6h-2.1z"
           fill="none"
           strokeWidth="1.6"
           strokeLinecap="round"
