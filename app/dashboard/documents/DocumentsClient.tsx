@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from "react"
 import Link from "next/link"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   Copy,
   Download,
@@ -12,10 +11,16 @@ import {
   Search,
   Tag,
   Trash2,
-  X,
 } from "lucide-react"
 
 import { useDocuments } from "@/features/documents/hooks/useDocuments"
+import { useTemplates } from "@/features/documents/hooks/useTemplates"
+import { useDocumentFilters } from "@/features/documents/hooks/useDocumentFilters"
+import { DocumentFilterBar } from "@/features/documents/components/DocumentFilterBar"
+import {
+  applyFilters,
+  buildSearchIndex,
+} from "@/features/documents/services/document-filter.service"
 import { useNewDocument } from "@/features/documents/components/NewDocumentPicker"
 import {
   DocumentDetailsPanel,
@@ -37,116 +42,23 @@ import { useConfirm } from "@/components/ui/confirm"
 import { formatDate, formatRelative } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
-type SortKey = "recent" | "oldest" | "name"
-
-/** Filtros persistidos na URL (dá para voltar, recarregar e compartilhar). */
-function useUrlFilters() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const params = useSearchParams()
-
-  const filters = {
-    q: params.get("q") ?? "",
-    category: params.get("categoria") ?? "",
-    subcategory: params.get("sub") ?? "",
-    author: params.get("autor") ?? "",
-    sort: (params.get("ordem") as SortKey) || "recent",
-  }
-
-  const set = (
-    patch: Partial<
-      Record<"q" | "categoria" | "sub" | "autor" | "ordem", string>
-    >
-  ) => {
-    const next = new URLSearchParams(params.toString())
-    Object.entries(patch).forEach(([k, v]) => {
-      if (v) next.set(k, v)
-      else next.delete(k)
-    })
-    const qs = next.toString()
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }
-
-  return { filters, set }
-}
-
 export default function DocumentsClient() {
   const { documents, categories, loading, remove, update } = useDocuments()
-  const { filters, set } = useUrlFilters()
+  const { templates } = useTemplates()
+  const { filters, set, reset } = useDocumentFilters()
   const { open: openPicker } = useNewDocument()
   const toast = useToast()
   const confirm = useConfirm()
 
-  const [query, setQuery] = useState(filters.q)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [detailsDoc, setDetailsDoc] = useState<GeneratedDocument | null>(null)
   const [metaDoc, setMetaDoc] = useState<GeneratedDocument | null>(null)
 
-  // Busca com pequeno atraso para não reescrever a URL a cada tecla
-  React.useEffect(() => {
-    const t = window.setTimeout(() => {
-      if (query !== filters.q) set({ q: query })
-    }, 250)
-    return () => window.clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query])
-
-  const options = useMemo(() => {
-    const cats = new Set<string>()
-    categories.forEach((c) => cats.add(c.name))
-    documents.forEach((d) => d.category && cats.add(d.category))
-    const subs = new Set<string>()
-    categories
-      .find((c) => c.name === filters.category)
-      ?.subcategories.forEach((s) => subs.add(s))
-    documents
-      .filter((d) => !filters.category || d.category === filters.category)
-      .forEach((d) => d.subcategory && subs.add(d.subcategory))
-    const authors = new Set<string>()
-    documents.forEach((d) => d.authorName && authors.add(d.authorName))
-    return {
-      categories: [...cats].sort(),
-      subcategories: [...subs].sort(),
-      authors: [...authors].sort(),
-    }
-  }, [documents, categories, filters.category])
-
-  const visible = useMemo(() => {
-    const q = filters.q.trim().toLowerCase()
-    const list = documents.filter(
-      (d) =>
-        (!q ||
-          d.fileName.toLowerCase().includes(q) ||
-          d.templateName.toLowerCase().includes(q) ||
-          (d.authorName ?? "").toLowerCase().includes(q) ||
-          Object.values(d.formData ?? {}).some(
-            (v) =>
-              typeof v === "string" &&
-              v.length < 2000 &&
-              v.toLowerCase().includes(q)
-          )) &&
-        (!filters.category || d.category === filters.category) &&
-        (!filters.subcategory || d.subcategory === filters.subcategory) &&
-        (!filters.author || d.authorName === filters.author)
-    )
-    const ts = (d: GeneratedDocument) => d.createdAt.toMillis()
-    if (filters.sort === "oldest") list.sort((a, b) => ts(a) - ts(b))
-    else if (filters.sort === "name")
-      list.sort((a, b) => a.fileName.localeCompare(b.fileName, "pt-BR"))
-    else list.sort((a, b) => ts(b) - ts(a))
-    return list
-  }, [documents, filters])
-
-  const hasFilters =
-    !!filters.q ||
-    !!filters.category ||
-    !!filters.subcategory ||
-    !!filters.author
-
-  const clearFilters = () => {
-    setQuery("")
-    set({ q: "", categoria: "", sub: "", autor: "" })
-  }
+  const searchIndex = useMemo(() => buildSearchIndex(documents), [documents])
+  const visible = useMemo(
+    () => applyFilters(documents, filters, searchIndex),
+    [documents, filters, searchIndex]
+  )
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -214,90 +126,16 @@ export default function DocumentsClient() {
         }
       />
 
-      {/* Barra de filtros */}
-      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center">
-        <div className="relative flex-1">
-          <Search
-            size={16}
-            className="text-subtle-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
-          />
-          <Input
-            aria-label="Buscar documentos"
-            placeholder="Buscar por nome, modelo, autor ou conteúdo"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex">
-          <Select
-            aria-label="Categoria"
-            value={filters.category}
-            onChange={(e) => set({ categoria: e.target.value, sub: "" })}
-            className="sm:w-40"
-          >
-            <option value="">Todas as categorias</option>
-            {options.categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label="Subcategoria"
-            value={filters.subcategory}
-            onChange={(e) => set({ sub: e.target.value })}
-            disabled={options.subcategories.length === 0}
-            className="sm:w-40"
-          >
-            <option value="">Subcategorias</option>
-            {options.subcategories.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </Select>
-          {options.authors.length > 1 && (
-            <Select
-              aria-label="Autor"
-              value={filters.author}
-              onChange={(e) => set({ autor: e.target.value })}
-              className="sm:w-36"
-            >
-              <option value="">Todos os autores</option>
-              {options.authors.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </Select>
-          )}
-          <Select
-            aria-label="Ordenar"
-            value={filters.sort}
-            onChange={(e) =>
-              set({ ordem: e.target.value === "recent" ? "" : e.target.value })
-            }
-            className="sm:w-36"
-          >
-            <option value="recent">Mais recentes</option>
-            <option value="oldest">Mais antigos</option>
-            <option value="name">Nome (A–Z)</option>
-          </Select>
-        </div>
-      </div>
-
-      {hasFilters && !loading && (
-        <div className="text-muted-foreground mb-3 flex items-center gap-2 text-sm">
-          {visible.length} de {documents.length}
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="text-foreground inline-flex items-center gap-1 font-medium hover:underline"
-          >
-            <X size={14} /> Limpar filtros
-          </button>
-        </div>
+      {!loading && documents.length > 0 && (
+        <DocumentFilterBar
+          filters={filters}
+          onChange={set}
+          onReset={reset}
+          documents={documents}
+          templates={templates}
+          categories={categories}
+          resultCount={visible.length}
+        />
       )}
 
       {/* Barra de seleção em lote */}
@@ -339,7 +177,7 @@ export default function DocumentsClient() {
           title="Nada encontrado"
           description="Nenhum documento corresponde aos filtros atuais."
           action={
-            <Button variant="outline" onClick={clearFilters}>
+            <Button variant="outline" onClick={reset}>
               Limpar filtros
             </Button>
           }
