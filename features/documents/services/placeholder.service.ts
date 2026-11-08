@@ -9,8 +9,55 @@ const CONTROL_PREFIXES = new Set(["/", "@", "^", "#"])
 const INTERNAL_GUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+/** Palavras comuns que costumam ir sem acento nas etiquetas. */
+const ACCENTED_WORDS: Record<string, string> = {
+  acao: "ação",
+  audiencia: "audiência",
+  avaliacao: "avaliação",
+  conclusao: "conclusão",
+  contestacao: "contestação",
+  descricao: "descrição",
+  endereco: "endereço",
+  especificacao: "especificação",
+  historico: "histórico",
+  inscricao: "inscrição",
+  juizo: "juízo",
+  numero: "número",
+  observacao: "observação",
+  observacoes: "observações",
+  orgao: "órgão",
+  peticao: "petição",
+  procuracao: "procuração",
+  razao: "razão",
+  reu: "réu",
+  responsavel: "responsável",
+  sentenca: "sentença",
+  titulo: "título",
+  vigencia: "vigência",
+}
+
+const UPPERCASE_WORDS = new Set([
+  "cpf",
+  "cnpj",
+  "rg",
+  "oab",
+  "cep",
+  "uf",
+  "nire",
+])
+
 function toFieldLabel(key: string) {
-  return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " ")
+  const words = key
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .map((word) => {
+      const lower = word.toLowerCase()
+      if (UPPERCASE_WORDS.has(lower)) return lower.toUpperCase()
+      return ACCENTED_WORDS[lower] ?? lower
+    })
+  const label = words.join(" ")
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 function resolveFieldType(tag: string): TemplateField["type"] {
@@ -102,25 +149,24 @@ export const placeholderService = {
       foundTags.add(rawTag)
     }
 
-    return Array.from(foundTags)
-      .map((tag) => {
-        const cleanKey = tag.startsWith("%") ? tag.slice(1) : tag
-        const existing = existingFields.find((field) => field.key === cleanKey)
+    return Array.from(foundTags).map((tag) => {
+      const cleanKey = tag.startsWith("%") ? tag.slice(1) : tag
+      const existing = existingFields.find((field) => field.key === cleanKey)
 
-        if (existing) {
-          return {
-            ...existing,
-            type:
-              existing.type === "image" ? existing.type : resolveFieldType(tag),
-          }
-        }
-
+      // Ao substituir o arquivo, preserva rótulo e tipo ajustados pelo usuário
+      if (existing) {
         return {
-          key: cleanKey,
-          label: toFieldLabel(cleanKey),
-          type: resolveFieldType(tag),
-        } satisfies TemplateField
-      })
-      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))
+          ...existing,
+          type: tag.startsWith("%") ? "image" : existing.type,
+        }
+      }
+
+      return {
+        key: cleanKey,
+        label: toFieldLabel(cleanKey),
+        type: resolveFieldType(tag),
+      } satisfies TemplateField
+    })
+    // Mantém a ordem em que as etiquetas aparecem no documento
   },
 }

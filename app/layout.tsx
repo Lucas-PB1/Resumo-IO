@@ -1,53 +1,55 @@
 import type { Metadata, Viewport } from "next"
+import { Inter, Newsreader } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/features/auth/hooks/useAuth"
+import { ThemeScript } from "@/components/theme/theme-script"
+import { ToastProvider } from "@/components/ui/toast"
+import { ConfirmProvider } from "@/components/ui/confirm"
+import { BRAND } from "@/lib/brand"
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+})
+
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  variable: "--font-newsreader",
+  display: "swap",
+})
 
 export const viewport: Viewport = {
-  themeColor: "#7a8fa1",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f5f1" },
+    { media: "(prefers-color-scheme: dark)", color: "#131312" },
+  ],
   width: "device-width",
   initialScale: 1,
 }
 
 export const metadata: Metadata = {
   title: {
-    default: "Resume IO | Gerador de Currículos Profissionais",
-    template: "%s | Resume IO",
+    default: `${BRAND.name} · ${BRAND.tagline}`,
+    template: `%s · ${BRAND.name}`,
   },
-  description:
-    "Crie currículos profissionais e modernos em minutos com o Resume IO. A plataforma definitiva para gestão de modelos e documentos.",
-  keywords: [
-    "currículo",
-    "cv builder",
-    "resume",
-    "templates",
-    "carreira",
-    "profissional",
-  ],
-  authors: [{ name: "Resume IO Team" }],
-  creator: "Resume IO",
-  publisher: "Resume IO",
+  description: BRAND.description,
+  applicationName: BRAND.name,
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
   openGraph: {
-    title: "Resume IO | Gerador de Currículos Profissionais",
-    description: "Crie currículos profissionais e modernos em minutos.",
-    url: "https://resume-io-demo.vercel.app", // Placeholder
-    siteName: "Resume IO",
+    title: BRAND.name,
+    description: BRAND.description,
+    siteName: BRAND.name,
     locale: "pt_BR",
     type: "website",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "Resume IO | Gerador de Currículos Profissionais",
-    description: "Crie currículos profissionais e modernos em minutos.",
-    creator: "@resumeio",
-  },
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
   },
 }
 
@@ -57,9 +59,20 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" className="h-full antialiased">
+    <html
+      lang="pt-BR"
+      suppressHydrationWarning
+      className={`${inter.variable} ${newsreader.variable} h-full`}
+    >
+      <head>
+        <ThemeScript />
+      </head>
       <body className="bg-background text-foreground flex min-h-full flex-col font-sans">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   )

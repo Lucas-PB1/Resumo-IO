@@ -3,7 +3,7 @@ import TemplatesClient from "./TemplatesClient"
 
 export const metadata: Metadata = {
   title: "Modelos",
-  description: "Gerencie seus modelos de currículo e documentos.",
+  description: "Seus modelos Word com etiquetas.",
 }
 
 export default function Page() {

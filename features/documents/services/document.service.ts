@@ -10,6 +10,7 @@ import {
   deleteDoc,
   updateDoc,
   doc,
+  getDoc,
 } from "firebase/firestore"
 import { storage } from "@/lib/firebase/storage"
 import {
@@ -49,11 +50,12 @@ export const documentService = {
   async saveGeneratedDocument(
     docData: Omit<GeneratedDocument, "id" | "createdAt">
   ) {
+    const createdAt = Timestamp.now()
     const docRef = await addDoc(collection(db, DOCUMENTS_COLLECTION), {
       ...docData,
-      createdAt: Timestamp.now(),
+      createdAt,
     })
-    return docRef.id
+    return { id: docRef.id, createdAt }
   },
 
   async uploadEvidence(files: File[], userId: string) {
@@ -92,6 +94,13 @@ export const documentService = {
       id: doc.id,
       ...doc.data(),
     })) as GeneratedDocument[]
+  },
+
+  async getDocumentById(id: string) {
+    const snap = await getDoc(doc(db, DOCUMENTS_COLLECTION, id))
+    return snap.exists()
+      ? ({ id: snap.id, ...snap.data() } as GeneratedDocument)
+      : null
   },
 
   async deleteDocument(id: string, storagePath: string, evidence?: Evidence[]) {

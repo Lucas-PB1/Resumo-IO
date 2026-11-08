@@ -3,7 +3,7 @@ import CategoriesClient from "./CategoriesClient"
 
 export const metadata: Metadata = {
   title: "Categorias",
-  description: "Organize seus documentos por categorias de negócio.",
+  description: "Organize modelos e documentos por área.",
 }
 
 export default function Page() {

@@ -1,502 +1,346 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import {
-  Sparkles,
-  Files,
-  Tag,
-  ArrowUpRight,
-  TrendingUp,
-  Clock,
-  PlusCircle,
-  FileSearch,
-  ArrowRight,
-} from "lucide-react"
-import { motion } from "motion/react"
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
+import React, { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { ArrowRight, Download, FileStack, Plus, Upload } from "lucide-react"
 
 import { useAuth } from "@/features/auth/hooks/useAuth"
-import { templateService } from "@/features/documents/services/template.service"
+import { useProfile } from "@/features/user/hooks/useProfile"
+import { useTemplates } from "@/features/documents/hooks/useTemplates"
+import { useNewDocument } from "@/features/documents/components/NewDocumentPicker"
 import {
   documentService,
-  GeneratedDocument,
+  type GeneratedDocument,
 } from "@/features/documents/services/document.service"
-import { taxonomyService } from "@/features/documents/services/taxonomy.service"
-import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card"
+  draftService,
+  type DocumentDraft,
+} from "@/features/documents/services/draft.service"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { EmptyState } from "@/components/ui/empty-state"
+import { FileChip } from "@/components/ui/file-chip"
+import { formatRelative, greeting } from "@/lib/format"
 
-interface TimelineData {
-  name: string
-  total: number
-}
-
-interface CategoryData {
-  name: string
-  value: number
+function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string
+  action?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-muted-foreground text-sm font-medium">{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  )
 }
 
 export default function DashboardClient() {
   const { user } = useAuth()
-  const router = useRouter()
-
-  const [stats, setStats] = useState({
-    templates: 0,
-    documents: 0,
-    categories: 0,
-  })
-  const [timelineData, setTimelineData] = useState<TimelineData[]>([])
-  const [categoryData, setCategoryData] = useState<CategoryData[]>([])
-  const [recentDocs, setRecentDocs] = useState<GeneratedDocument[]>([])
-  const [loading, setLoading] = useState(true)
+  const { firstName } = useProfile()
+  const { open: openPicker } = useNewDocument()
+  const { templates, loading: templatesLoading } = useTemplates()
+  const [documents, setDocuments] = useState<GeneratedDocument[]>([])
+  const [docsLoading, setDocsLoading] = useState(true)
+  const drafts = useMemo<DocumentDraft[]>(
+    () => (user ? draftService.list(user.uid) : []),
+    [user]
+  )
 
   useEffect(() => {
-    async function fetchDashboardData() {
-      if (!user) return
-      try {
-        const [templates, documents, categories] = await Promise.all([
-          templateService.getTemplates(user.uid),
-          documentService.getDocuments(user.uid),
-          taxonomyService.getCategories(user.uid),
-        ])
-
-        setStats({
-          templates: templates.length,
-          documents: documents.length,
-          categories: categories.length,
-        })
-
-        setRecentDocs(documents.slice(0, 5))
-
-        // Process Timeline (Last 7 days)
-        const last7Days = Array.from({ length: 7 }, (_, i) => {
-          const d = new Date()
-          d.setDate(d.getDate() - i)
-          return d.toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-          })
-        }).reverse()
-
-        const timelineMap = documents.reduce(
-          (acc: Record<string, number>, doc) => {
-            const date = new Date(doc.createdAt.toDate()).toLocaleDateString(
-              "pt-BR",
-              { day: "2-digit", month: "2-digit" }
-            )
-            acc[date] = (acc[date] || 0) + 1
-            return acc
-          },
-          {}
-        )
-
-        setTimelineData(
-          last7Days.map((date) => ({
-            name: date,
-            total: timelineMap[date] || 0,
-          }))
-        )
-
-        // Process Categories (Top 5)
-        const catMap = documents.reduce((acc: Record<string, number>, doc) => {
-          const cat = doc.category || "Sem Categoria"
-          acc[cat] = (acc[cat] || 0) + 1
-          return acc
-        }, {})
-
-        setCategoryData(
-          Object.entries(catMap)
-            .map(([name, value]) => ({
-              name,
-              value,
-            }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 5)
-        )
-      } catch (err) {
-        console.error("Dashboard data error", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchDashboardData()
+    if (!user) return
+    documentService
+      .getDocuments(user.uid)
+      .then(setDocuments)
+      .catch((err) => console.error("Dashboard data error", err))
+      .finally(() => setDocsLoading(false))
   }, [user])
 
-  const COLORS = ["#8a9a5b", "#c17c67", "#d4a373", "#7a8fa1", "#8b735b"]
+  const loading = docsLoading || templatesLoading
 
-  if (loading)
-    return (
-      <div className="text-muted-foreground animate-pulse p-12 text-center">
-        Carregando inteligência de dados...
-      </div>
+  const thisMonth = useMemo(() => {
+    const now = new Date()
+    return documents.filter((d) => {
+      const date = d.createdAt.toDate()
+      return (
+        date.getMonth() === now.getMonth() &&
+        date.getFullYear() === now.getFullYear()
+      )
+    }).length
+  }, [documents])
+
+  const topTemplates = useMemo(() => {
+    const usage = new Map<string, number>()
+    documents.forEach((d) =>
+      usage.set(d.templateId, (usage.get(d.templateId) ?? 0) + 1)
     )
+    return [...templates]
+      .sort((a, b) => (usage.get(b.id!) ?? 0) - (usage.get(a.id!) ?? 0))
+      .slice(0, 4)
+      .map((t) => ({ ...t, uses: usage.get(t.id!) ?? 0 }))
+  }, [templates, documents])
+
+  const validDrafts = drafts.filter((d) =>
+    templates.some((t) => t.id === d.templateId)
+  )
+
+  const today = new Date().toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  })
 
   return (
-    <div className="space-y-12 pb-20">
-      {/* Header Area */}
-      <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="space-y-1"
-        >
-          <h1 className="text-foreground text-4xl font-black tracking-tighter">
-            Dashboard Central
-          </h1>
-          <p className="text-muted-foreground flex items-center gap-2 text-lg font-medium">
-            Bem-vindo,{" "}
-            <span className="text-dusty-blue">
-              {user?.displayName || user?.email?.split("@")[0]}
-            </span>
-            <TrendingUp size={18} className="text-moss" />
+    <div className="space-y-10">
+      <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <p className="text-muted-foreground text-sm first-letter:uppercase">
+            {today}
           </p>
-        </motion.div>
-
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={() => router.push("/dashboard/documents")}
-            variant="outline"
-            className="border-brand-500/20 bg-brand-500/5 hover:bg-brand-500/10 h-12 px-6 font-bold"
+          <h1 className="font-serif text-[32px] leading-tight font-medium tracking-[-0.01em]">
+            {greeting()}
+            {firstName ? `, ${firstName}` : ""}.
+          </h1>
+          {!loading && (
+            <p className="text-muted-foreground text-[15px]">
+              {thisMonth === 0
+                ? "Nenhum documento gerado este mês ainda."
+                : `${thisMonth} ${thisMonth === 1 ? "documento gerado" : "documentos gerados"} este mês.`}
+            </p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/dashboard/templates/new"
+            className={buttonVariants({ variant: "outline" })}
           >
-            Ver Histórico <Clock size={18} className="ml-2" />
-          </Button>
-          <Button
-            onClick={() => router.push("/dashboard/templates")}
-            className="shadow-dusty-blue/20 h-12 gap-2 rounded-xl px-6 font-black shadow-xl"
-          >
-            Novo Relatório <PlusCircle size={18} />
+            <Upload size={16} /> Enviar modelo
+          </Link>
+          <Button onClick={openPicker}>
+            <Plus size={16} /> Novo documento
           </Button>
         </div>
-      </div>
+      </header>
 
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          {
-            label: "Modelos Ativos",
-            value: stats.templates,
-            icon: Sparkles,
-            color: "text-moss",
-            bg: "bg-moss/10",
-          },
-          {
-            label: "Documentos Gerados",
-            value: stats.documents,
-            icon: Files,
-            color: "text-terracotta",
-            bg: "bg-terracotta/10",
-          },
-          {
-            label: "Categorias de Negócio",
-            value: stats.categories,
-            icon: Tag,
-            color: "text-dusty-blue",
-            bg: "bg-dusty-blue/10",
-          },
-        ].map((kpi, i) => (
-          <motion.div
-            key={kpi.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-          >
-            <Card className="bg-card/60 group hover:bg-card/80 hover:border-brand-500/30 border-b-2 border-none border-transparent shadow-2xl backdrop-blur-md transition-all">
-              <CardContent className="flex items-center justify-between p-8">
-                <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs font-black tracking-widest uppercase">
-                    {kpi.label}
+      {!loading && templates.length === 0 && <OnboardingCard />}
+
+      {validDrafts.length > 0 && (
+        <Section title="Continuar de onde parou">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {validDrafts.slice(0, 3).map((d) => (
+              <Link
+                key={d.templateId}
+                href={`/dashboard/templates/${d.templateId}/fill`}
+                className="bg-card border-border hover:border-border-strong group rounded-xl border p-4 shadow-xs transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="truncate text-sm font-medium">
+                    {d.templateName}
                   </p>
-                  <p className="text-foreground text-4xl font-black">
-                    {kpi.value}
-                  </p>
+                  <ArrowRight
+                    size={16}
+                    className="text-subtle-foreground group-hover:text-foreground shrink-0 transition-transform group-hover:translate-x-0.5"
+                  />
                 </div>
-                <div
-                  className={`${kpi.bg} ${kpi.color} rounded-2xl p-4 transition-transform group-hover:scale-110`}
-                >
-                  <kpi.icon size={28} />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Production Timeline */}
-        <Card className="bg-card/40 overflow-hidden border-none shadow-xl backdrop-blur-sm lg:col-span-2">
-          <CardHeader className="p-8 pb-0">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <CardTitle className="text-xl font-bold">
-                  Produção Recente
-                </CardTitle>
-                <CardDescription>
-                  Documentos gerados nos últimos 7 dias
-                </CardDescription>
-              </div>
-              <div className="bg-moss/10 text-moss rounded-full px-3 py-1 text-[10px] font-black tracking-widest uppercase">
-                Tempo Real
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="h-[350px] p-8">
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-              minWidth={0}
-              minHeight={0}
-            >
-              <AreaChart data={timelineData}>
-                <defs>
-                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#7a8fa1" stopOpacity={0.28} />
-                    <stop offset="95%" stopColor="#7a8fa1" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#2d3748"
-                  strokeOpacity={0.08}
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="name"
-                  stroke="#64748b"
-                  strokeOpacity={0.7}
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  dy={10}
-                />
-                <YAxis
-                  stroke="#64748b"
-                  strokeOpacity={0.7}
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  width={30}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid rgba(32, 35, 42, 0.1)",
-                    borderRadius: "16px",
-                    boxShadow: "0 25px 50px -12px rgba(15,23,42,0.16)",
-                  }}
-                  itemStyle={{ color: "#282a2f", fontWeight: "bold" }}
-                  labelStyle={{ color: "#64748b" }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="total"
-                  stroke="#7a8fa1"
-                  strokeWidth={4}
-                  fillOpacity={1}
-                  fill="url(#colorTotal)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Categories Distribution */}
-        <Card className="bg-card/40 overflow-hidden border-none shadow-xl backdrop-blur-sm">
-          <CardHeader className="p-8 pb-0">
-            <CardTitle className="text-xl font-bold">Segmentação</CardTitle>
-            <CardDescription>Por categoria principal</CardDescription>
-          </CardHeader>
-          <CardContent className="relative h-[350px] p-8">
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-              minWidth={0}
-              minHeight={0}
-            >
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="45%"
-                  innerRadius={80}
-                  outerRadius={100}
-                  paddingAngle={8}
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid rgba(32, 35, 42, 0.1)",
-                    borderRadius: "16px",
-                  }}
-                  itemStyle={{ color: "#282a2f", fontWeight: "bold" }}
-                  labelStyle={{ color: "#64748b" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Custom Legend */}
-            <div className="mt-4 space-y-2">
-              {categoryData.map((cat, i) => (
-                <div
-                  key={cat.name}
-                  className="flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center gap-2">
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Rascunho · editado {formatRelative(d.updatedAt)}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
                     <div
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                      className="bg-primary h-full rounded-full"
+                      style={{
+                        width: `${d.total ? (d.filled / d.total) * 100 : 0}%`,
+                      }}
                     />
-                    <span className="text-muted-foreground font-medium">
-                      {cat.name}
-                    </span>
                   </div>
-                  <span className="text-foreground font-bold">
-                    {cat.value} items
+                  <span className="text-muted-foreground tabular text-xs">
+                    {d.filled}/{d.total}
                   </span>
                 </div>
-              ))}
-              {categoryData.length === 0 && (
-                <p className="text-muted-foreground pt-10 text-center text-xs italic">
-                  Sem dados categóricos.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      )}
 
-      {/* Recent & Shortcuts */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Recent Activity */}
-        <Card className="bg-card/40 border-none shadow-xl backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between p-8">
-            <div>
-              <CardTitle className="text-xl font-bold">
-                Atividade Recente
-              </CardTitle>
-              <CardDescription>Últimos documentos processados</CardDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/dashboard/documents")}
-              className="text-brand-400 font-bold"
+      {(loading || topTemplates.length > 0) && (
+        <Section
+          title="Seus modelos"
+          action={
+            <Link
+              href="/dashboard/templates"
+              className="text-muted-foreground hover:text-foreground text-sm"
             >
               Ver todos
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-4 p-8 pt-0">
-            {recentDocs.map((doc) => (
-              <div
-                key={doc.id}
-                className="group bg-brand-500/5 hover:bg-brand-500/10 flex items-center justify-between rounded-2xl p-4 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="bg-muted rounded-xl p-3">
-                    <FileSearch size={20} className="text-brand-600" />
-                  </div>
-                  <div>
-                    <p className="text-foreground max-w-[150px] truncate text-sm font-bold">
-                      {doc.fileName}
-                    </p>
-                    <p className="text-muted-foreground text-[10px] font-medium tracking-widest uppercase">
-                      {doc.category || "Geral"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="text-muted-foreground hidden font-medium sm:block">
-                    {new Date(doc.createdAt.toDate()).toLocaleDateString(
-                      "pt-BR"
-                    )}
-                  </span>
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 opacity-0 transition-opacity group-hover:opacity-100"
+            </Link>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-[92px] rounded-xl" />
+                ))
+              : topTemplates.map((t) => (
+                  <Link
+                    key={t.id}
+                    href={`/dashboard/templates/${t.id}/fill`}
+                    className="bg-card border-border hover:border-border-strong group flex flex-col justify-between rounded-xl border p-4 shadow-xs transition-colors"
                   >
-                    <ArrowUpRight size={18} className="text-brand-500" />
-                  </a>
+                    <div>
+                      <p className="line-clamp-2 text-sm font-medium">
+                        {t.name}
+                      </p>
+                      <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                        {t.category || "Sem categoria"}
+                      </p>
+                    </div>
+                    <p className="text-subtle-foreground group-hover:text-primary mt-3 flex items-center gap-1 text-xs font-medium">
+                      Preencher <ArrowRight size={12} />
+                      {t.uses > 0 && (
+                        <span className="text-subtle-foreground ml-auto font-normal">
+                          {t.uses}× usado
+                        </span>
+                      )}
+                    </p>
+                  </Link>
+                ))}
+          </div>
+        </Section>
+      )}
+
+      <Section
+        title="Documentos recentes"
+        action={
+          documents.length > 0 && (
+            <Link
+              href="/dashboard/documents"
+              className="text-muted-foreground hover:text-foreground text-sm"
+            >
+              Ver histórico
+            </Link>
+          )
+        }
+      >
+        {loading ? (
+          <div className="bg-card border-border divide-border divide-y rounded-xl border">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-3.5">
+                <Skeleton className="h-9 w-9" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-1/3" />
+                  <Skeleton className="h-3 w-1/5" />
                 </div>
               </div>
             ))}
-            {recentDocs.length === 0 && (
-              <p className="text-muted-foreground py-4 text-center italic">
-                Nenhuma atividade recente.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+        ) : documents.length === 0 ? (
+          <EmptyState
+            icon={FileStack}
+            title="Nenhum documento ainda"
+            description="Os documentos que você gerar aparecem aqui, prontos para baixar ou editar."
+          />
+        ) : (
+          <ul className="bg-card border-border divide-border divide-y rounded-xl border shadow-xs">
+            {documents.slice(0, 6).map((doc) => (
+              <li
+                key={doc.id}
+                className="group flex items-center gap-3 px-3.5 py-3"
+              >
+                <FileChip fileName={doc.fileName} />
+                <Link
+                  href={`/dashboard/templates/${doc.templateId}/fill?editDocId=${doc.id}`}
+                  className="min-w-0 flex-1"
+                >
+                  <p className="truncate text-sm font-medium group-hover:underline">
+                    {doc.fileName}
+                  </p>
+                  <p className="text-muted-foreground truncate text-xs">
+                    {doc.templateName}
+                    {doc.category ? ` · ${doc.category}` : ""}
+                  </p>
+                </Link>
+                <span className="text-muted-foreground hidden text-xs sm:block">
+                  {formatRelative(doc.createdAt.toDate())}
+                </span>
+                <a
+                  href={doc.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Baixar ${doc.fileName}`}
+                  className={buttonVariants({
+                    variant: "ghost",
+                    size: "icon-sm",
+                  })}
+                >
+                  <Download size={15} />
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+    </div>
+  )
+}
 
-        {/* Shortcuts & Quick Flows */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <Card
-            onClick={() => router.push("/dashboard/templates/new")}
-            className="bg-card group hover:bg-dusty-blue/10 cursor-pointer rounded-3xl border-none transition-all"
-          >
-            <CardContent className="space-y-4 p-8">
-              <div className="bg-dusty-blue/10 flex h-12 w-12 items-center justify-center rounded-2xl">
-                <PlusCircle className="text-dusty-blue" size={24} />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-xl font-bold">Novo Modelo</h4>
-                <p className="text-muted-foreground text-sm font-medium">
-                  Suba um arquivo DOCX e defina as etiquetas.
-                </p>
-              </div>
-              <div className="text-dusty-blue flex items-center gap-2 pt-2 text-sm font-bold transition-transform group-hover:translate-x-1">
-                Começar agora <ArrowRight size={16} />
-              </div>
-            </CardContent>
-          </Card>
+function OnboardingCard() {
+  const steps = [
+    {
+      title: "Prepare um modelo no Word",
+      body: (
+        <>
+          Onde a informação muda, escreva uma etiqueta entre chaves:{" "}
+          <code className="bg-muted rounded px-1 font-mono text-[12px]">
+            {"{nome_cliente}"}
+          </code>
+          ,{" "}
+          <code className="bg-muted rounded px-1 font-mono text-[12px]">
+            {"{data_audiencia}"}
+          </code>
+          .
+        </>
+      ),
+    },
+    {
+      title: "Envie o .docx",
+      body: "O sistema lê as etiquetas e monta o formulário sozinho — datas, telefones e textos longos são detectados pelo nome.",
+    },
+    {
+      title: "Preencha e gere",
+      body: "Veja o documento sendo montado ao lado enquanto digita e baixe em Word ou PDF.",
+    },
+  ]
 
-          <Card
-            onClick={() => router.push("/dashboard/categories")}
-            className="bg-card group hover:bg-brand-500/10 cursor-pointer rounded-3xl border-none transition-all"
-          >
-            <CardContent className="space-y-4 p-8">
-              <div className="bg-dusty-blue/20 flex h-12 w-12 items-center justify-center rounded-2xl">
-                <Tag className="text-dusty-blue" size={24} />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-xl font-bold">Taxonomia</h4>
-                <p className="text-muted-foreground text-sm font-medium">
-                  Organize categorias e subcategorias.
-                </p>
-              </div>
-              <div className="text-muted-foreground flex items-center gap-2 pt-2 text-sm font-bold transition-transform group-hover:translate-x-1">
-                Gerenciar <ArrowRight size={16} />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+  return (
+    <div className="bg-card border-border rounded-xl border p-6 shadow-xs">
+      <h2 className="font-serif text-xl font-medium">Comece em três passos</h2>
+      <ol className="mt-5 grid gap-6 md:grid-cols-3">
+        {steps.map((s, i) => (
+          <li key={s.title} className="space-y-1.5">
+            <span className="bg-accent text-accent-foreground flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold">
+              {i + 1}
+            </span>
+            <p className="text-sm font-medium">{s.title}</p>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              {s.body}
+            </p>
+          </li>
+        ))}
+      </ol>
+      <Link
+        href="/dashboard/templates/new"
+        className={buttonVariants({ className: "mt-6" })}
+      >
+        <Upload size={16} /> Enviar meu primeiro modelo
+      </Link>
     </div>
   )
 }

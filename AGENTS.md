@@ -6,22 +6,28 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 <!-- END:nextjs-agent-rules -->
 
-# Project Guidelines (Resume.io CMS)
+# Project Guidelines (Minuta)
 
-## 🎨 Design System: Midnight Premium
+Produto: transforma modelos `.docx` com `{etiquetas}` em formulários e gera documentos (petições, relatórios, pareceres). Público principal: advogados(as) que querem acelerar peças repetitivas. O nome do produto fica em `lib/brand.ts` — nunca escreva o nome direto no código.
 
-Toda a interface deve seguir a estética profissional e moderna de Dashboards (Linear/Stripe style):
+## 🎨 Design System: Editorial sóbrio
 
-- **Cores base:** Dark Background, Cards com `bg-card/60` e `backdrop-blur-2xl`.
-- **Cantos:** Arredondamento agressivo mas elegante (`rounded-2xl` para cards, `rounded-xl` para inputs).
-- **Acentos:** Usar a escala `brand-500` (roxo/azul) para ações principais e `white/5` ou `white/10` para bordas sutis.
-- **Micro-interações:** Uso de `motion/react` para estados de entrada e hover (sem elevação excessiva).
+Visual de ferramenta de trabalho, não de landing page. Referências: Linear, Notion, Stripe Dashboard em modo claro.
+
+- **Temas:** claro (padrão) e escuro, via classe `.dark` no `<html>` (`components/theme`). Use sempre os tokens semânticos (`bg-background`, `bg-card`, `bg-surface`, `text-muted-foreground`, `text-subtle-foreground`, `border-border`, `border-border-strong`, `bg-primary`, `text-danger`, `bg-success-soft`…). Nunca use cores fixas (`white/5`, `red-500`, hex) em componentes.
+- **Tipografia:** Inter para interface; Newsreader (`font-serif`) só para títulos de página e marca. Pesos 400/500/600 — sem `font-black`, sem `tracking-widest uppercase` em rótulos.
+- **Cor:** `primary` (azul-tinta) só para a ação principal da tela e estados ativos. O resto é neutro.
+- **Superfícies:** cards `rounded-xl border bg-card shadow-xs`; inputs `rounded-lg` (via `components/ui`). Sem gradientes, sem glassmorphism, sem `shadow-2xl`.
+- **Movimento:** `motion/react` apenas para entrada de overlays (dialog, toast, menus). Nada de animar cada card ou `scale` no hover.
+- **Feedback:** nunca `alert()`/`confirm()`. Use `useToast()` e `useConfirm()` (`components/ui`). Carregamento com `Skeleton`, listas vazias com `EmptyState`.
+- **Texto:** português claro e direto, sem jargão de marketing ("inteligência", "premium", "tempo real").
 
 ## 🏗️ Arquitetura: Clean & Modular
 
 - **Services:** Toda lógica de Firebase, Storage ou manipulação de arquivos deve estar em arquivos `.service.ts` dentro da feature correspondente.
 - **Hooks:** Lógica de estado e formulários deve ser extraída para Hooks customizados.
-- **DRY:** Reutilizar componentes de UI de `components/ui/` em vez de criar ad-hoc.
+- **DRY:** Reutilizar componentes de UI de `components/ui/` (Button/`buttonVariants`, Input, Select, Dialog, Toast, Confirm, PageHeader, EmptyState, Skeleton, Badge, FileChip) em vez de criar ad-hoc.
+- **Links com cara de botão:** use `<Link className={buttonVariants(...)}>` — nunca `<Link><Button/></Link>`.
 
 ## 📄 Automação de Documentos
 

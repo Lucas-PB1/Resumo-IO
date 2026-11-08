@@ -1,11 +1,10 @@
 "use client"
 
+import Link from "next/link"
 import React, { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
-import { LogIn } from "lucide-react"
-import { motion } from "motion/react"
 
 import { loginSchema, LoginFormData } from "../schemas"
 import { authService } from "../services/auth.service"
@@ -47,23 +46,16 @@ export const LoginForm = () => {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-md">
-      <CardHeader className="space-y-2 text-center">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-primary/10 text-primary mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full"
-        >
-          <LogIn size={24} />
-        </motion.div>
-        <CardTitle className="text-2xl font-bold tracking-tight">
+    <Card className="mx-auto w-full max-w-sm shadow-sm">
+      <CardHeader className="space-y-1 px-6 pt-7 pb-5">
+        <CardTitle className="font-serif text-[26px] font-medium tracking-[-0.01em]">
           Bem-vindo de volta
         </CardTitle>
-        <CardDescription>Acesse o painel administrativo</CardDescription>
+        <CardDescription>Entre para continuar seus documentos</CardDescription>
       </CardHeader>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-6">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -77,12 +69,12 @@ export const LoginForm = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Senha</Label>
-              <a
+              <Link
                 href="/forgot-password"
                 className="text-primary text-sm font-medium hover:underline"
               >
                 Esqueceu a senha?
-              </a>
+              </Link>
             </div>
             <Input
               id="password"
@@ -93,12 +85,12 @@ export const LoginForm = () => {
           </div>
 
           {errorStatus && (
-            <div className="rounded-md border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-500">
+            <div className="bg-danger-soft text-danger rounded-lg px-3 py-2.5 text-sm">
               {errorStatus}
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
+        <CardFooter className="flex flex-col gap-4 border-0 px-6 pt-5 pb-7">
           <Button type="submit" className="w-full" isLoading={isSubmitting}>
             Entrar
           </Button>
@@ -107,10 +99,8 @@ export const LoginForm = () => {
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card text-muted-foreground px-2">
-                Ou continue com
-              </span>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card text-muted-foreground px-2">ou</span>
             </div>
           </div>
 
@@ -151,12 +141,12 @@ export const LoginForm = () => {
 
           <div className="text-muted-foreground w-full text-center text-sm">
             Não tem uma conta?{" "}
-            <a
+            <Link
               href="/register"
               className="text-primary font-medium hover:underline"
             >
               Cadastre-se
-            </a>
+            </Link>
           </div>
         </CardFooter>
       </form>
