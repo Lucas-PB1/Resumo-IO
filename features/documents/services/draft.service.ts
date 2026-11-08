@@ -13,6 +13,7 @@ export interface DocumentDraft {
   updatedAt: number
 }
 
+// Chave mantida do nome antigo do produto para não perder rascunhos salvos.
 const PREFIX = "minuta:draft:"
 /** Imagens muito grandes ficam fora do rascunho para não estourar o localStorage. */
 const MAX_VALUE_LENGTH = 400_000
